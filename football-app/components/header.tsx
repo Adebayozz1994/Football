@@ -1,22 +1,96 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { Menu, Search, Trophy, Users, Newspaper, Globe, User, Bell } from "lucide-react"
+import { Menu, Search, Trophy, Users, Newspaper, Globe, User, Bell, LogOut, Shield } from "lucide-react"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 
 export function Header() {
   const [isSearchOpen, setIsSearchOpen] = useState(false)
+  const [profileType, setProfileType] = useState<"user" | "admin" | null>(null)
+  const [profile, setProfile] = useState<{ avatar?: string; name?: string; email?: string } | null>(null)
+  const router = useRouter()
 
+  // Navigation
   const navigation = [
     { name: "Matches", href: "/matches", icon: Trophy },
     { name: "Teams", href: "/teams", icon: Users },
     { name: "News", href: "/news", icon: Newspaper },
     { name: "Europe", href: "/europe", icon: Globe },
   ]
+
+  useEffect(() => {
+    // Detect and fetch profile for user/admin (based on token presence)
+    const userToken = typeof window !== "undefined" ? localStorage.getItem("token") : null
+    const adminToken = typeof window !== "undefined" ? localStorage.getItem("admin_token") : null
+
+    if (adminToken) {
+      setProfileType("admin")
+      fetch("http://localhost:5000/api/admin/profile", {
+        headers: { Authorization: `Bearer ${adminToken}` }
+      })
+        .then(res => res.json())
+        .then(data => {
+          if (data.success && data.data?.admin) {
+            setProfile({
+              avatar: data.data.admin.avatar || "/placeholder-user.jpg",
+              name: data.data.admin.firstName + " " + data.data.admin.lastName,
+              email: data.data.admin.email
+            })
+          }
+        })
+        .catch(() => setProfile(null))
+    } else if (userToken) {
+      setProfileType("user")
+      fetch("http://localhost:5000/api/user/profile", {
+        headers: { Authorization: `Bearer ${userToken}` }
+      })
+        .then(res => res.json())
+        .then(data => {
+          if (data.success && data.data?.user) {
+            setProfile({
+              avatar: data.data.user.avatar || "/placeholder-user.jpg",
+              name: data.data.user.firstName + " " + data.data.user.lastName,
+              email: data.data.user.email
+            })
+          }
+        })
+        .catch(() => setProfile(null))
+    } else {
+      setProfileType(null)
+      setProfile(null)
+    }
+  }, [])
+
+  // Admin button navigation protection
+  const handleAdminNavigate = (e: React.MouseEvent) => {
+    e.preventDefault()
+    const adminToken = typeof window !== "undefined" ? localStorage.getItem("admin_token") : null
+    if (adminToken) {
+      router.push("/admin")
+    } else {
+      router.push("/admin/login")
+    }
+  }
+
+  // Sign out handler
+  const handleSignOut = () => {
+    if (profileType === "admin") {
+      localStorage.removeItem("admin_token")
+    }
+    if (profileType === "user") {
+      localStorage.removeItem("token")
+    }
+    setProfileType(null)
+    setProfile(null)
+    router.push("/")
+    router.refresh?.()
+  }
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-gold-400/20 bg-black-900/95 backdrop-blur supports-[backdrop-filter]:bg-black-900/80">
@@ -50,6 +124,18 @@ export function Header() {
 
           {/* Right Side Actions */}
           <div className="flex items-center space-x-3">
+            {/* Admin Button for guests */}
+            {!profileType && (
+              <Button
+                variant="outline"
+                className="flex items-center text-gold-400 border-gold-400 hover:border-gold-300 hover:text-gold-300 font-bold"
+                onClick={handleAdminNavigate}
+              >
+                <Shield className="h-5 w-5 mr-2" />
+                Admin
+              </Button>
+            )}
+
             {/* Search */}
             <Button
               variant="ghost"
@@ -66,34 +152,87 @@ export function Header() {
               <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
             </Button>
 
-            {/* User Menu */}
+            {/* User/Admin Menu */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="hover:bg-gold-400/10 hover:text-gold-400">
-                  <User className="h-5 w-5" />
+                <Button variant="ghost" size="icon" className="hover:bg-gold-400/10 hover:text-gold-400 p-0">
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage src={profile?.avatar || "/placeholder-user.jpg"} alt={profile?.name || "Profile"} />
+                    <AvatarFallback className="bg-gray-800 text-gold-400 font-bold">
+                      {(profile?.name ? profile.name.charAt(0) : <User className="h-5 w-5" />)}
+                    </AvatarFallback>
+                  </Avatar>
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="bg-black-800 border-gold-400/20">
-                <DropdownMenuItem asChild className="hover:bg-gold-400/10">
-                  <Link href="/login" className="text-gold-400">
-                    Login
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild className="hover:bg-gold-400/10">
-                  <Link href="/signup" className="text-gold-400">
-                    Register
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild className="hover:bg-gold-400/10">
-                  <Link href="/admin" className="text-gold-400">
-                    Admin Dashboard
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild className="hover:bg-gold-400/10">
-                  <Link href="/profile" className="text-gold-400">
-                    Profile
-                  </Link>
-                </DropdownMenuItem>
+              <DropdownMenuContent align="end" className="bg-black-800 border-gold-400/20 min-w-[150px]">
+                {/* User dropdown */}
+                {profileType === "user" && (
+                  <>
+                    <DropdownMenuItem asChild className="hover:bg-gold-400/10">
+                      <Link href="/profile" className="text-gold-400">
+                        Profile
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild className="hover:bg-gold-400/10">
+                      <Link href="/login" className="text-gold-400">
+                        Login
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild className="hover:bg-gold-400/10">
+                      <Link href="/signup" className="text-gold-400">
+                        Register
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleSignOut} className="hover:bg-gold-400/10 cursor-pointer text-gold-400">
+                      <LogOut className="mr-2 h-4 w-4" />
+                      Sign out
+                    </DropdownMenuItem>
+                  </>
+                )}
+                {/* Admin dropdown */}
+                {profileType === "admin" && (
+                  <>
+                    <DropdownMenuItem asChild className="hover:bg-gold-400/10">
+                      <Link href="/admin" className="text-gold-400">
+                        Admin Dashboard
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild className="hover:bg-gold-400/10">
+                      <Link href="/admin/profile" className="text-gold-400">
+                        Profile
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild className="hover:bg-gold-400/10">
+                      <Link href="/admin/login" className="text-gold-400">
+                        Login
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild className="hover:bg-gold-400/10">
+                      <Link href="/admin/signup" className="text-gold-400">
+                        Register
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleSignOut} className="hover:bg-gold-400/10 cursor-pointer text-gold-400">
+                      <LogOut className="mr-2 h-4 w-4" />
+                      Sign out
+                    </DropdownMenuItem>
+                  </>
+                )}
+                {/* No profile (guest) */}
+                {!profileType && (
+                  <>
+                    <DropdownMenuItem asChild className="hover:bg-gold-400/10">
+                      <Link href="/login" className="text-gold-400">
+                        Login
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild className="hover:bg-gold-400/10">
+                      <Link href="/signup" className="text-gold-400">
+                        Register
+                      </Link>
+                    </DropdownMenuItem>
+                  </>
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
 
@@ -117,12 +256,70 @@ export function Header() {
                     </Link>
                   ))}
                   <div className="border-t border-gold-400/20 pt-6">
-                    <Link href="/login" className="block text-lg font-medium text-gold-400 hover:text-gold-300 mb-4">
-                      Login
-                    </Link>
-                    <Link href="/signup" className="block text-lg font-medium text-gold-400 hover:text-gold-300">
-                      Register
-                    </Link>
+                    {/* Admin button for mobile */}
+                    {!profileType && (
+                      <button
+                        onClick={handleAdminNavigate}
+                        className="flex items-center mb-4 text-lg font-medium text-gold-400 hover:text-gold-300 w-full"
+                      >
+                        <Shield className="h-6 w-6 mr-2" />
+                        Admin
+                      </button>
+                    )}
+                    {/* Mobile dropdown: show all options for both user/admin */}
+                    {profileType === "admin" && (
+                      <>
+                        <Link href="/admin" className="block text-lg font-medium text-gold-400 hover:text-gold-300 mb-4">
+                          Admin Dashboard
+                        </Link>
+                        <Link href="/admin/profile" className="block text-lg font-medium text-gold-400 hover:text-gold-300 mb-4">
+                          Profile
+                        </Link>
+                        <Link href="/admin/login" className="block text-lg font-medium text-gold-400 hover:text-gold-300 mb-4">
+                          Login
+                        </Link>
+                        <Link href="/admin/signup" className="block text-lg font-medium text-gold-400 hover:text-gold-300 mb-4">
+                          Register
+                        </Link>
+                        <button
+                          onClick={handleSignOut}
+                          className="block text-lg font-medium text-gold-400 hover:text-gold-300 mb-4 text-left w-full"
+                        >
+                          <LogOut className="inline-block mr-2 h-5 w-5" />
+                          Sign out
+                        </button>
+                      </>
+                    )}
+                    {profileType === "user" && (
+                      <>
+                        <Link href="/profile" className="block text-lg font-medium text-gold-400 hover:text-gold-300 mb-4">
+                          Profile
+                        </Link>
+                        <Link href="/login" className="block text-lg font-medium text-gold-400 hover:text-gold-300 mb-4">
+                          Login
+                        </Link>
+                        <Link href="/signup" className="block text-lg font-medium text-gold-400 hover:text-gold-300 mb-4">
+                          Register
+                        </Link>
+                        <button
+                          onClick={handleSignOut}
+                          className="block text-lg font-medium text-gold-400 hover:text-gold-300 mb-4 text-left w-full"
+                        >
+                          <LogOut className="inline-block mr-2 h-5 w-5" />
+                          Sign out
+                        </button>
+                      </>
+                    )}
+                    {!profileType && (
+                      <>
+                        <Link href="/login" className="block text-lg font-medium text-gold-400 hover:text-gold-300 mb-4">
+                          Login
+                        </Link>
+                        <Link href="/signup" className="block text-lg font-medium text-gold-400 hover:text-gold-300 mb-4">
+                          Register
+                        </Link>
+                      </>
+                    )}
                   </div>
                 </div>
               </SheetContent>
