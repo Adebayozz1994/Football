@@ -122,22 +122,64 @@ const getProfile = async (req, res) => {
   }
 };
 
-// Update user profile
+// Update user profile controller (covers all fields)
 const updateProfile = async (req, res) => {
   try {
-    const { firstName, lastName, phone } = req.body;
-    
+    // Destructure all updatable fields from req.body
+    const {
+      firstName,
+      lastName,
+      phone,
+      bio,
+      socialLinks,
+      birthdate,
+      gender,
+      location,
+      address,
+      theme,
+      language,
+      achievements,
+      badges,
+      favoritePlayers,
+      favoriteLeagues,
+      profileUpdatedAt,
+      coverPhoto,
+      preferences,
+      avatar,
+      followedTeams,
+      followedStates
+    } = req.body;
+
+    // Build the updateData object (only update if provided)
     const updateData = {};
     if (firstName) updateData.firstName = firstName;
     if (lastName) updateData.lastName = lastName;
     if (phone) updateData.phone = phone;
-    
+    if (bio !== undefined) updateData.bio = bio;
+    if (socialLinks) updateData.socialLinks = socialLinks;
+    if (birthdate) updateData.birthdate = birthdate;
+    if (gender) updateData.gender = gender;
+    if (location) updateData.location = location;
+    if (address) updateData.address = address;
+    if (theme) updateData.theme = theme;
+    if (language) updateData.language = language;
+    if (Array.isArray(achievements)) updateData.achievements = achievements;
+    if (Array.isArray(badges)) updateData.badges = badges;
+    if (Array.isArray(favoritePlayers)) updateData.favoritePlayers = favoritePlayers;
+    if (Array.isArray(favoriteLeagues)) updateData.favoriteLeagues = favoriteLeagues;
+    updateData.profileUpdatedAt = new Date();
+    if (coverPhoto) updateData.coverPhoto = coverPhoto;
+    if (preferences) updateData.preferences = preferences;
+    if (avatar) updateData.avatar = avatar;
+    if (Array.isArray(followedTeams)) updateData.followedTeams = followedTeams;
+    if (Array.isArray(followedStates)) updateData.followedStates = followedStates;
+
     const user = await User.findByIdAndUpdate(
       req.user._id,
       updateData,
       { new: true, runValidators: true }
     ).select('-password');
-    
+
     res.json({
       success: true,
       message: 'Profile updated successfully',

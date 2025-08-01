@@ -41,8 +41,18 @@ export default function AdminProfilePage() {
     phone: "",
     bio: "",
     location: "",
-    timezone: "",
+    birthdate: "",
     avatar_url: "",
+    gender: "",
+    address: "",
+    theme: "",
+    language: "",
+    achievements: "",
+    badges: "",
+    favoritePlayers: "",
+    favoriteLeagues: "",
+    coverPhoto: "",
+    timezone: "",
   })
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
@@ -50,7 +60,6 @@ export default function AdminProfilePage() {
   useEffect(() => {
     const fetchProfile = async () => {
       setIsLoading(true)
-      // Get admin token from localStorage (or your auth context)
       const token = typeof window !== "undefined" ? localStorage.getItem("admin_token") : null
       if (!token) {
         setIsLoading(false)
@@ -75,24 +84,44 @@ export default function AdminProfilePage() {
           email: admin.email,
           created_at: admin.createdAt,
           last_sign_in_at: admin.lastLogin,
+          role: admin.role,
         })
         setProfile({
           full_name: admin.firstName + " " + admin.lastName,
           phone: admin.phone || "",
           bio: admin.bio || "",
-          location: admin.state || "",
-          timezone: admin.timezone || "",
+          location: admin.location || admin.state || "",
+          birthdate: admin.birthdate ? admin.birthdate.slice(0, 10) : "",
           avatar_url: admin.avatar || "",
-          login_count: admin.login_count || 0
+          gender: admin.gender || "",
+          address: admin.address || "",
+          theme: admin.theme || "",
+          language: admin.language || "",
+          achievements: (admin.achievements && admin.achievements.join(", ")) || "",
+          badges: (admin.badges && admin.badges.join(", ")) || "",
+          favoritePlayers: (admin.favoritePlayers && admin.favoritePlayers.join(", ")) || "",
+          favoriteLeagues: (admin.favoriteLeagues && admin.favoriteLeagues.join(", ")) || "",
+          coverPhoto: admin.coverPhoto || "",
+          timezone: admin.timezone || "",
         })
         setFormData({
           full_name: admin.firstName + " " + admin.lastName,
           email: admin.email || "",
           phone: admin.phone || "",
           bio: admin.bio || "",
-          location: admin.state || "",
-          timezone: admin.timezone || "",
+          location: admin.location || admin.state || "",
+          birthdate: admin.birthdate ? admin.birthdate.slice(0, 10) : "",
           avatar_url: admin.avatar || "",
+          gender: admin.gender || "",
+          address: admin.address || "",
+          theme: admin.theme || "",
+          language: admin.language || "en",
+          achievements: (admin.achievements && admin.achievements.join(", ")) || "",
+          badges: (admin.badges && admin.badges.join(", ")) || "",
+          favoritePlayers: (admin.favoritePlayers && admin.favoritePlayers.join(", ")) || "",
+          favoriteLeagues: (admin.favoriteLeagues && admin.favoriteLeagues.join(", ")) || "",
+          coverPhoto: admin.coverPhoto || "",
+          timezone: admin.timezone || "",
         })
       } catch (error) {
         setUser(null)
@@ -103,7 +132,7 @@ export default function AdminProfilePage() {
     fetchProfile()
   }, [])
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { id, value } = e.target
     setFormData((prev) => ({ ...prev, [id]: value }))
   }
@@ -111,17 +140,52 @@ export default function AdminProfilePage() {
   const handleSave = async () => {
     setIsSaving(true)
     if (!user) return
-    // TODO: Implement actual profile update with your backend
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      setProfile((prev: any) => ({ ...prev, ...formData }))
-      toast({
-        title: "Profile Updated",
-        description: "Your profile has been successfully updated.",
-        action: <CheckCircle className="text-green-500" />,
+      const token = typeof window !== "undefined" ? localStorage.getItem("admin_token") : null
+      const payload = {
+        firstName: formData.full_name.split(" ")[0],
+        lastName: formData.full_name.split(" ").slice(1).join(" "),
+        phone: formData.phone,
+        bio: formData.bio,
+        location: formData.location,
+        birthdate: formData.birthdate,
+        avatar: formData.avatar_url,
+        gender: formData.gender,
+        address: formData.address,
+        theme: formData.theme,
+        language: formData.language,
+        achievements: formData.achievements.split(",").map((v) => v.trim()).filter(Boolean),
+        badges: formData.badges.split(",").map((v) => v.trim()).filter(Boolean),
+        favoritePlayers: formData.favoritePlayers.split(",").map((v) => v.trim()).filter(Boolean),
+        favoriteLeagues: formData.favoriteLeagues.split(",").map((v) => v.trim()).filter(Boolean),
+        coverPhoto: formData.coverPhoto,
+        timezone: formData.timezone,
+      }
+      const res = await fetch("http://localhost:5000/api/admin/profile", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
       })
-      setIsEditing(false)
+      const data = await res.json()
+      if (!res.ok || !data.success) {
+        toast({
+          title: "Update Failed",
+          description: data.message || "Failed to update profile. Please try again.",
+          variant: "destructive",
+          action: <XCircle className="text-red-500" />,
+        })
+      } else {
+        setProfile((prev: any) => ({ ...prev, ...formData }))
+        toast({
+          title: "Profile Updated",
+          description: "Your profile has been successfully updated.",
+          action: <CheckCircle className="text-green-500" />,
+        })
+        setIsEditing(false)
+      }
     } catch (error) {
       toast({
         title: "Update Failed",
@@ -135,15 +199,7 @@ export default function AdminProfilePage() {
 
   const handleCancel = () => {
     if (profile) {
-      setFormData({
-        full_name: profile.full_name || "",
-        email: user?.email || "",
-        phone: profile.phone || "",
-        bio: profile.bio || "",
-        location: profile.location || "",
-        timezone: profile.timezone || "",
-        avatar_url: profile.avatar_url || "",
-      })
+      setFormData({ ...profile, email: user?.email || "" })
     }
     setIsEditing(false)
   }
@@ -159,11 +215,9 @@ export default function AdminProfilePage() {
     }
     const file = event.target.files[0]
     setIsSaving(true)
-    // TODO: Implement actual file upload with your chosen storage solution
     try {
       // Simulate file upload
       await new Promise(resolve => setTimeout(resolve, 2000))
-      // For now, just use a placeholder URL
       const mockUrl = "/placeholder-user.jpg"
       setProfile((prev: any) => ({ ...prev, avatar_url: mockUrl }))
       setFormData((prev) => ({ ...prev, avatar_url: mockUrl }))
@@ -192,7 +246,6 @@ export default function AdminProfilePage() {
             <Skeleton className="h-10 w-24 bg-gray-800" />
           </div>
           <Skeleton className="h-6 w-96 mb-8 bg-gray-800" />
-
           <Card className="card-black-gold">
             <CardHeader className="flex flex-col items-center">
               <Skeleton className="h-24 w-24 rounded-full mb-4 bg-gray-700" />
@@ -259,7 +312,6 @@ export default function AdminProfilePage() {
   return (
     <div className="flex-1 p-8 bg-black text-yellow-400 min-h-screen">
       <div className="max-w-4xl mx-auto">
-        {/* ... unchanged profile style ... */}
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-3xl font-bold text-white">Admin Profile</h1>
           {isEditing ? (
@@ -296,7 +348,7 @@ export default function AdminProfilePage() {
             <div className="relative group mb-4">
               <Avatar className="h-24 w-24 border-2 border-yellow-400">
                 <AvatarImage
-                  src={formData.avatar_url || "/placeholder.svg?height=128&width=128&query=user+avatar"}
+                  src={formData.avatar_url || "/placeholder-user.jpg"}
                   alt={formData.full_name || "User"}
                 />
                 <AvatarFallback className="bg-gray-800 text-yellow-400 text-4xl">
@@ -325,7 +377,7 @@ export default function AdminProfilePage() {
             <CardDescription className="text-gray-400">{user.email}</CardDescription>
             <div className="flex gap-2 mt-2">
               <Badge variant="secondary" className="bg-yellow-400 text-black font-semibold">
-                Administrator
+                {user.role ? user.role.charAt(0).toUpperCase() + user.role.slice(1) : "Admin"}
               </Badge>
               <Badge variant="secondary" className="bg-gray-700 text-yellow-400">
                 Active
@@ -385,6 +437,60 @@ export default function AdminProfilePage() {
                   className="bg-gray-900 border-yellow-400/30 text-white disabled:opacity-70"
                 />
               </div>
+              <div className="space-y-2">
+                <Label htmlFor="address" className="text-white">
+                  Address
+                </Label>
+                <Input
+                  id="address"
+                  value={formData.address}
+                  onChange={handleInputChange}
+                  disabled={!isEditing || isSaving}
+                  className="bg-gray-900 border-yellow-400/30 text-white disabled:opacity-70"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="birthdate" className="text-white">
+                  Birthdate
+                </Label>
+                <Input
+                  id="birthdate"
+                  type="date"
+                  value={formData.birthdate}
+                  onChange={handleInputChange}
+                  disabled={!isEditing || isSaving}
+                  className="bg-gray-900 border-yellow-400/30 text-white disabled:opacity-70"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="gender" className="text-white">
+                  Gender
+                </Label>
+                <select
+                  id="gender"
+                  value={formData.gender}
+                  onChange={handleInputChange}
+                  disabled={!isEditing || isSaving}
+                  className="bg-gray-900 border-yellow-400/30 text-white p-2 rounded disabled:opacity-70"
+                >
+                  <option value="">Select</option>
+                  <option value="male">Male</option>
+                  <option value="female">Female</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="timezone" className="text-white">
+                  Timezone
+                </Label>
+                <Input
+                  id="timezone"
+                  value={formData.timezone}
+                  onChange={handleInputChange}
+                  disabled={!isEditing || isSaving}
+                  className="bg-gray-900 border-yellow-400/30 text-white disabled:opacity-70"
+                />
+              </div>
             </div>
             <div className="space-y-2">
               <Label htmlFor="bio" className="text-white">
@@ -400,18 +506,101 @@ export default function AdminProfilePage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="timezone" className="text-white">
-                Timezone
+              <Label htmlFor="theme" className="text-white">
+                Theme
+              </Label>
+              <select
+                id="theme"
+                value={formData.theme}
+                onChange={handleInputChange}
+                disabled={!isEditing || isSaving}
+                className="bg-gray-900 border-yellow-400/30 text-white p-2 rounded disabled:opacity-70"
+              >
+                <option value="system">System</option>
+                <option value="light">Light</option>
+                <option value="dark">Dark</option>
+              </select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="language" className="text-white">
+                Language
               </Label>
               <Input
-                id="timezone"
-                value={formData.timezone}
+                id="language"
+                value={formData.language}
                 onChange={handleInputChange}
                 disabled={!isEditing || isSaving}
                 className="bg-gray-900 border-yellow-400/30 text-white disabled:opacity-70"
               />
             </div>
-
+            <div className="space-y-2">
+              <Label htmlFor="coverPhoto" className="text-white">
+                Cover Photo URL
+              </Label>
+              <Input
+                id="coverPhoto"
+                value={formData.coverPhoto}
+                onChange={handleInputChange}
+                disabled={!isEditing || isSaving}
+                className="bg-gray-900 border-yellow-400/30 text-white disabled:opacity-70"
+              />
+            </div>
+            <Separator className="bg-yellow-400/20" />
+            <h3 className="text-lg font-semibold text-white">Achievements, Badges & Favourites</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="achievements" className="text-white">
+                  Achievements
+                </Label>
+                <Input
+                  id="achievements"
+                  value={formData.achievements}
+                  onChange={handleInputChange}
+                  disabled={!isEditing || isSaving}
+                  placeholder="Comma separated"
+                  className="bg-gray-900 border-yellow-400/30 text-white disabled:opacity-70"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="badges" className="text-white">
+                  Badges
+                </Label>
+                <Input
+                  id="badges"
+                  value={formData.badges}
+                  onChange={handleInputChange}
+                  disabled={!isEditing || isSaving}
+                  placeholder="Comma separated"
+                  className="bg-gray-900 border-yellow-400/30 text-white disabled:opacity-70"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="favoritePlayers" className="text-white">
+                  Favorite Players
+                </Label>
+                <Input
+                  id="favoritePlayers"
+                  value={formData.favoritePlayers}
+                  onChange={handleInputChange}
+                  disabled={!isEditing || isSaving}
+                  placeholder="Comma separated"
+                  className="bg-gray-900 border-yellow-400/30 text-white disabled:opacity-70"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="favoriteLeagues" className="text-white">
+                  Favorite Leagues
+                </Label>
+                <Input
+                  id="favoriteLeagues"
+                  value={formData.favoriteLeagues}
+                  onChange={handleInputChange}
+                  disabled={!isEditing || isSaving}
+                  placeholder="Comma separated"
+                  className="bg-gray-900 border-yellow-400/30 text-white disabled:opacity-70"
+                />
+              </div>
+            </div>
             <Separator className="bg-yellow-400/20" />
             <h3 className="text-lg font-semibold text-white">Account Statistics</h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -436,40 +625,11 @@ export default function AdminProfilePage() {
               <Card className="bg-gray-900 border-yellow-400/20 text-white p-4">
                 <div className="flex items-center gap-2 mb-2">
                   <LogIn className="h-5 w-5 text-yellow-400" />
-                  <span className="text-sm font-medium">Login Count</span>
+                  <span className="text-sm font-medium">Role</span>
                 </div>
-                <p className="text-lg font-bold">{profile?.login_count || 0}</p>
+                <p className="text-lg font-bold">{user?.role ? user.role.charAt(0).toUpperCase() + user.role.slice(1) : "Admin"}</p>
               </Card>
             </div>
-
-            <Separator className="bg-yellow-400/20" />
-            <h3 className="text-lg font-semibold text-white">Permissions & Roles</h3>
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <ShieldCheck className="h-5 w-5 text-yellow-400" />
-                <span className="text-white font-medium">Assigned Roles:</span>
-                <Badge variant="secondary" className="bg-yellow-400 text-black">
-                  Admin
-                </Badge>
-                <Badge variant="secondary" className="bg-gray-700 text-yellow-400">
-                  Moderator
-                </Badge>
-              </div>
-              <div className="flex items-center gap-2">
-                <ListChecks className="h-5 w-5 text-yellow-400" />
-                <span className="text-white font-medium">Key Permissions:</span>
-                <Badge variant="secondary" className="bg-gray-700 text-yellow-400">
-                  Manage Users
-                </Badge>
-                <Badge variant="secondary" className="bg-gray-700 text-yellow-400">
-                  Edit Content
-                </Badge>
-                <Badge variant="secondary" className="bg-gray-700 text-yellow-400">
-                  View Analytics
-                </Badge>
-              </div>
-            </div>
-
             <Separator className="bg-yellow-400/20" />
             <h3 className="text-lg font-semibold text-white">Recent Activity</h3>
             <div className="space-y-4">

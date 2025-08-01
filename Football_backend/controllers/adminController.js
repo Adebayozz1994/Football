@@ -122,8 +122,83 @@ const getProfile = async (req, res) => {
 };
 
 
+// Update admin profile controller (covers all fields)
+const updateAdminProfile = async (req, res) => {
+  try {
+    const {
+      firstName,
+      lastName,
+      phone,
+      bio,
+      socialLinks,
+      birthdate,
+      gender,
+      location,
+      address,
+      theme,
+      language,
+      achievements,
+      badges,
+      favoritePlayers,
+      favoriteLeagues,
+      profileUpdatedAt,
+      coverPhoto,
+      preferences,
+      avatar,
+      followedTeams,
+      followedStates,
+      timezone,
+    } = req.body;
+
+    const updateData = {};
+    if (firstName) updateData.firstName = firstName;
+    if (lastName) updateData.lastName = lastName;
+    if (phone) updateData.phone = phone;
+    if (bio !== undefined) updateData.bio = bio;
+    if (socialLinks) updateData.socialLinks = socialLinks;
+    if (birthdate) updateData.birthdate = birthdate;
+    if (gender) updateData.gender = gender;
+    if (location) updateData.location = location;
+    if (address) updateData.address = address;
+    if (theme) updateData.theme = theme;
+    if (language) updateData.language = language;
+    if (Array.isArray(achievements)) updateData.achievements = achievements;
+    if (Array.isArray(badges)) updateData.badges = badges;
+    if (Array.isArray(favoritePlayers)) updateData.favoritePlayers = favoritePlayers;
+    if (Array.isArray(favoriteLeagues)) updateData.favoriteLeagues = favoriteLeagues;
+    updateData.profileUpdatedAt = new Date();
+    if (coverPhoto) updateData.coverPhoto = coverPhoto;
+    if (preferences) updateData.preferences = preferences;
+    if (avatar) updateData.avatar = avatar;
+    if (Array.isArray(followedTeams)) updateData.followedTeams = followedTeams;
+    if (Array.isArray(followedStates)) updateData.followedStates = followedStates;
+    if (timezone) updateData.timezone = timezone;
+
+    const admin = await Admin.findByIdAndUpdate(
+      req.admin._id,
+      updateData,
+      { new: true, runValidators: true }
+    ).select('-password');
+
+    res.json({
+      success: true,
+      message: 'Profile updated successfully',
+      data: { admin }
+    });
+  } catch (error) {
+    console.error('Update admin profile error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error while updating admin profile'
+    });
+  }
+};
+
+module.exports = { updateAdminProfile }
+
 module.exports = {
   register,
   login,
   getProfile,
+  updateAdminProfile,
 }

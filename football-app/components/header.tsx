@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { Menu, Search, Trophy, Users, Newspaper, Globe, User, Bell, LogOut, Shield } from "lucide-react"
+import { Menu, Search, Trophy, Users, Newspaper, Globe, User, Bell, LogOut, Shield, Settings } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 
 export function Header() {
@@ -174,13 +174,9 @@ export function Header() {
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild className="hover:bg-gold-400/10">
-                      <Link href="/login" className="text-gold-400">
-                        Login
-                      </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem asChild className="hover:bg-gold-400/10">
-                      <Link href="/signup" className="text-gold-400">
-                        Register
+                      <Link href="/settings" className="text-gold-400 flex items-center">
+                        <Settings className="mr-2 h-4 w-4" />
+                        Settings
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={handleSignOut} className="hover:bg-gold-400/10 cursor-pointer text-gold-400">
@@ -200,16 +196,6 @@ export function Header() {
                     <DropdownMenuItem asChild className="hover:bg-gold-400/10">
                       <Link href="/admin/profile" className="text-gold-400">
                         Profile
-                      </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem asChild className="hover:bg-gold-400/10">
-                      <Link href="/admin/login" className="text-gold-400">
-                        Login
-                      </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem asChild className="hover:bg-gold-400/10">
-                      <Link href="/admin/signup" className="text-gold-400">
-                        Register
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={handleSignOut} className="hover:bg-gold-400/10 cursor-pointer text-gold-400">
@@ -275,12 +261,6 @@ export function Header() {
                         <Link href="/admin/profile" className="block text-lg font-medium text-gold-400 hover:text-gold-300 mb-4">
                           Profile
                         </Link>
-                        <Link href="/admin/login" className="block text-lg font-medium text-gold-400 hover:text-gold-300 mb-4">
-                          Login
-                        </Link>
-                        <Link href="/admin/signup" className="block text-lg font-medium text-gold-400 hover:text-gold-300 mb-4">
-                          Register
-                        </Link>
                         <button
                           onClick={handleSignOut}
                           className="block text-lg font-medium text-gold-400 hover:text-gold-300 mb-4 text-left w-full"
@@ -295,11 +275,9 @@ export function Header() {
                         <Link href="/profile" className="block text-lg font-medium text-gold-400 hover:text-gold-300 mb-4">
                           Profile
                         </Link>
-                        <Link href="/login" className="block text-lg font-medium text-gold-400 hover:text-gold-300 mb-4">
-                          Login
-                        </Link>
-                        <Link href="/signup" className="block text-lg font-medium text-gold-400 hover:text-gold-300 mb-4">
-                          Register
+                        <Link href="/settings" className="block text-lg font-medium text-gold-400 hover:text-gold-300 mb-4 flex items-center">
+                          <Settings className="mr-2 h-5 w-5" />
+                          Settings
                         </Link>
                         <button
                           onClick={handleSignOut}
