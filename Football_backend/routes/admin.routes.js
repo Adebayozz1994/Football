@@ -10,7 +10,9 @@ router.post('/login', adminController.login);
 // Protect this route with admin JWT auth
 router.get('/profile', authenticateToken, adminController.getProfile);
 router.put('/profile', authenticateToken, adminController.updateAdminProfile);
-
+router.put("/change-password", authenticateToken, adminController.changePassword)
+router.post("/forgot-password", adminController.forgotPassword)
+router.post("/reset-password", adminController.resetPassword)
 
 // All admin routes require authentication
 // router.use(authenticateToken);

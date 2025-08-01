@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Separator } from "@/components/ui/separator"
 import { useToast } from "@/components/ui/use-toast"
-import { UploadCloud, Save, CheckCircle } from "lucide-react"
+import { UploadCloud, Save, CheckCircle, KeyRound, RefreshCcw, Lock } from "lucide-react"
 
 export default function AdminSettingsPage() {
   const { toast } = useToast()
@@ -46,6 +46,25 @@ export default function AdminSettingsPage() {
   })
   const [isSaving, setIsSaving] = useState(false)
 
+  // Security forms
+  const [securityTab, setSecurityTab] = useState("change-password")
+  const [changePasswordForm, setChangePasswordForm] = useState({
+    currentPassword: "",
+    newPassword: "",
+  })
+  const [isChangeLoading, setIsChangeLoading] = useState(false)
+  const [forgotPasswordForm, setForgotPasswordForm] = useState({
+    email: "",
+  })
+  const [isForgotLoading, setIsForgotLoading] = useState(false)
+  const [resetToken, setResetToken] = useState("")
+  const [resetPasswordForm, setResetPasswordForm] = useState({
+    token: "",
+    newPassword: "",
+  })
+  const [isResetLoading, setIsResetLoading] = useState(false)
+
+  // Settings logic
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { id, value } = e.target
     setSettings((prev) => ({ ...prev, [id]: value }))
@@ -61,9 +80,7 @@ export default function AdminSettingsPage() {
 
   const handleSaveSettings = async () => {
     setIsSaving(true)
-    // Simulate API call
     await new Promise((resolve) => setTimeout(resolve, 1500))
-    console.log("Saving settings:", settings)
     toast({
       title: "Settings Saved",
       description: "Your application settings have been updated successfully.",
@@ -86,6 +103,123 @@ export default function AdminSettingsPage() {
     })
   }
 
+  // Security logic
+  const handleChangePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setChangePasswordForm((prev) => ({ ...prev, [e.target.id]: e.target.value }))
+  }
+  const handleForgotPasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setForgotPasswordForm((prev) => ({ ...prev, [e.target.id]: e.target.value }))
+  }
+  const handleResetPasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setResetPasswordForm((prev) => ({ ...prev, [e.target.id]: e.target.value }))
+  }
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsChangeLoading(true)
+    try {
+      const token = typeof window !== "undefined" ? localStorage.getItem("admin_token") : null
+      const res = await fetch("http://localhost:5000/api/admin/change-password", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(changePasswordForm),
+      })
+      const data = await res.json()
+      if (!res.ok || !data.success) {
+        toast({
+          title: "Change Password Failed",
+          description: data.message,
+          variant: "destructive",
+        })
+      } else {
+        toast({
+          title: "Password Changed",
+          description: "Your password has been successfully changed.",
+          action: <CheckCircle className="text-green-500" />,
+        })
+        setChangePasswordForm({ currentPassword: "", newPassword: "" })
+      }
+    } catch (error) {
+      toast({
+        title: "Change Password Failed",
+        description: "Server error while changing password.",
+        variant: "destructive",
+      })
+    }
+    setIsChangeLoading(false)
+  }
+
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsForgotLoading(true)
+    try {
+      const res = await fetch("http://localhost:5000/api/admin/forgot-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(forgotPasswordForm),
+      })
+      const data = await res.json()
+      if (!res.ok || !data.success) {
+        toast({
+          title: "Forgot Password Failed",
+          description: data.message,
+          variant: "destructive",
+        })
+      } else {
+        toast({
+          title: "Check Your Email",
+          description: "A reset token has been sent to your email address.",
+          action: <CheckCircle className="text-green-500" />,
+        })
+        setResetToken(data.resetToken || "")
+      }
+    } catch (error) {
+      toast({
+        title: "Forgot Password Failed",
+        description: "Server error while requesting password reset.",
+        variant: "destructive",
+      })
+    }
+    setIsForgotLoading(false)
+  }
+
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsResetLoading(true)
+    try {
+      const res = await fetch("http://localhost:5000/api/admin/reset-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(resetPasswordForm),
+      })
+      const data = await res.json()
+      if (!res.ok || !data.success) {
+        toast({
+          title: "Reset Password Failed",
+          description: data.message,
+          variant: "destructive",
+        })
+      } else {
+        toast({
+          title: "Password Reset",
+          description: "Your password has been reset successfully.",
+          action: <CheckCircle className="text-green-500" />,
+        })
+        setResetPasswordForm({ token: "", newPassword: "" })
+      }
+    } catch (error) {
+      toast({
+        title: "Reset Password Failed",
+        description: "Server error while resetting password.",
+        variant: "destructive",
+      })
+    }
+    setIsResetLoading(false)
+  }
+
   return (
     <div className="flex-1 p-8 bg-black text-yellow-400 min-h-screen">
       <div className="max-w-4xl mx-auto">
@@ -94,36 +228,11 @@ export default function AdminSettingsPage() {
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full grid-cols-3 md:grid-cols-5 bg-gray-900 border border-yellow-400/20">
-            <TabsTrigger
-              value="general"
-              className="data-[state=active]:bg-yellow-400 data-[state=active]:text-black text-yellow-400"
-            >
-              General
-            </TabsTrigger>
-            <TabsTrigger
-              value="security"
-              className="data-[state=active]:bg-yellow-400 data-[state=active]:text-black text-yellow-400"
-            >
-              Security
-            </TabsTrigger>
-            <TabsTrigger
-              value="notifications"
-              className="data-[state=active]:bg-yellow-400 data-[state=active]:text-black text-yellow-400"
-            >
-              Notifications
-            </TabsTrigger>
-            <TabsTrigger
-              value="appearance"
-              className="data-[state=active]:bg-yellow-400 data-[state=active]:text-black text-yellow-400"
-            >
-              Appearance
-            </TabsTrigger>
-            <TabsTrigger
-              value="system"
-              className="data-[state=active]:bg-yellow-400 data-[state=active]:text-black text-yellow-400"
-            >
-              System
-            </TabsTrigger>
+            <TabsTrigger value="general" className="data-[state=active]:bg-yellow-400 data-[state=active]:text-black text-yellow-400">General</TabsTrigger>
+            <TabsTrigger value="security" className="data-[state=active]:bg-yellow-400 data-[state=active]:text-black text-yellow-400">Security</TabsTrigger>
+            <TabsTrigger value="notifications" className="data-[state=active]:bg-yellow-400 data-[state=active]:text-black text-yellow-400">Notifications</TabsTrigger>
+            <TabsTrigger value="appearance" className="data-[state=active]:bg-yellow-400 data-[state=active]:text-black text-yellow-400">Appearance</TabsTrigger>
+            <TabsTrigger value="system" className="data-[state=active]:bg-yellow-400 data-[state=active]:text-black text-yellow-400">System</TabsTrigger>
           </TabsList>
 
           <TabsContent value="general" className="mt-6">
@@ -267,6 +376,141 @@ export default function AdminSettingsPage() {
                     className="bg-gray-900 border-yellow-400/30 text-white"
                   />
                 </div>
+              </CardContent>
+            </Card>
+            <Card className="card-black-gold">
+              <CardHeader>
+                <CardTitle className="text-white">Admin Password Management</CardTitle>
+                <CardDescription className="text-gray-400">Change, reset, or recover your admin password.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Tabs value={securityTab} onValueChange={setSecurityTab} className="w-full mb-6">
+                  <TabsList className="grid w-full grid-cols-3 bg-gray-900 border border-yellow-400/20 mb-4">
+                    <TabsTrigger value="change-password" className="data-[state=active]:bg-yellow-400 data-[state=active]:text-black text-yellow-400">
+                      <KeyRound className="h-4 w-4 mr-2 inline" /> Change Password
+                    </TabsTrigger>
+                    <TabsTrigger value="forgot-password" className="data-[state=active]:bg-yellow-400 data-[state=active]:text-black text-yellow-400">
+                      <RefreshCcw className="h-4 w-4 mr-2 inline" /> Forgot Password
+                    </TabsTrigger>
+                    <TabsTrigger value="reset-password" className="data-[state=active]:bg-yellow-400 data-[state=active]:text-black text-yellow-400">
+                      <Lock className="h-4 w-4 mr-2 inline" /> Reset Password
+                    </TabsTrigger>
+                  </TabsList>
+                  {/* Change Password */}
+                  <TabsContent value="change-password" className="mt-2">
+                    <form onSubmit={handleChangePassword} className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="currentPassword" className="text-white">Current Password</Label>
+                        <Input
+                          id="currentPassword"
+                          type="password"
+                          value={changePasswordForm.currentPassword}
+                          onChange={handleChangePasswordChange}
+                          className="bg-gray-900 border-yellow-400/30 text-white"
+                          autoComplete="current-password"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="newPassword" className="text-white">New Password</Label>
+                        <Input
+                          id="newPassword"
+                          type="password"
+                          value={changePasswordForm.newPassword}
+                          onChange={handleChangePasswordChange}
+                          className="bg-gray-900 border-yellow-400/30 text-white"
+                          autoComplete="new-password"
+                        />
+                      </div>
+                      <Button type="submit" className="btn-gold w-full" disabled={isChangeLoading}>
+                        {isChangeLoading ? (
+                          <div className="flex items-center">
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-black mr-2"></div>
+                            Changing...
+                          </div>
+                        ) : (
+                          <div className="flex items-center">
+                            <Save className="mr-2 h-4 w-4" />
+                            Change Password
+                          </div>
+                        )}
+                      </Button>
+                    </form>
+                  </TabsContent>
+                  {/* Forgot Password */}
+                  <TabsContent value="forgot-password" className="mt-2">
+                    <form onSubmit={handleForgotPassword} className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="email" className="text-white">Admin Email</Label>
+                        <Input
+                          id="email"
+                          type="email"
+                          value={forgotPasswordForm.email}
+                          onChange={handleForgotPasswordChange}
+                          className="bg-gray-900 border-yellow-400/30 text-white"
+                          autoComplete="email"
+                        />
+                      </div>
+                      <Button type="submit" className="btn-gold w-full" disabled={isForgotLoading}>
+                        {isForgotLoading ? (
+                          <div className="flex items-center">
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-black mr-2"></div>
+                            Sending...
+                          </div>
+                        ) : (
+                          <div className="flex items-center">
+                            <RefreshCcw className="mr-2 h-4 w-4" />
+                            Send Reset Token
+                          </div>
+                        )}
+                      </Button>
+                    </form>
+                    {resetToken && (
+                      <div className="mt-4 p-2 bg-gray-900 border border-yellow-400 rounded text-yellow-400 text-xs">
+                        <span className="font-bold">Reset Token (dev only):</span> {resetToken}
+                      </div>
+                    )}
+                  </TabsContent>
+                  {/* Reset Password */}
+                  <TabsContent value="reset-password" className="mt-2">
+                    <form onSubmit={handleResetPassword} className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="token" className="text-white">Reset Token</Label>
+                        <Input
+                          id="token"
+                          type="text"
+                          value={resetPasswordForm.token}
+                          onChange={handleResetPasswordChange}
+                          className="bg-gray-900 border-yellow-400/30 text-white"
+                          autoComplete="off"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="newPassword" className="text-white">New Password</Label>
+                        <Input
+                          id="newPassword"
+                          type="password"
+                          value={resetPasswordForm.newPassword}
+                          onChange={handleResetPasswordChange}
+                          className="bg-gray-900 border-yellow-400/30 text-white"
+                          autoComplete="new-password"
+                        />
+                      </div>
+                      <Button type="submit" className="btn-gold w-full" disabled={isResetLoading}>
+                        {isResetLoading ? (
+                          <div className="flex items-center">
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-black mr-2"></div>
+                            Resetting...
+                          </div>
+                        ) : (
+                          <div className="flex items-center">
+                            <Lock className="mr-2 h-4 w-4" />
+                            Reset Password
+                          </div>
+                        )}
+                      </Button>
+                    </form>
+                  </TabsContent>
+                </Tabs>
               </CardContent>
             </Card>
           </TabsContent>
@@ -500,7 +744,7 @@ export default function AdminSettingsPage() {
                     />
                   </div>
                 </div>
-                <Button variant="outline" className="w-full btn-black bg-transparent">
+                <Button variant="outline" className="w-full btn-black bg-transparent" onClick={handleExportSettings}>
                   <UploadCloud className="mr-2 h-4 w-4" /> Export All Settings
                 </Button>
               </CardContent>

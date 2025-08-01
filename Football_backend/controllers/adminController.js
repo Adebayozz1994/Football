@@ -3,7 +3,6 @@ const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 
-
 // Generate JWT token
 const generateToken = (adminId) => {
   return jwt.sign({ adminId }, process.env.JWT_SECRET || 'supersecretjwt', {
@@ -11,7 +10,7 @@ const generateToken = (adminId) => {
   });
 };
 
-// REGISTER 
+// REGISTER
 const register = async (req, res) => {
   try {
     const { firstName, lastName, email, password, phone, favoriteState, favoriteTeam } = req.body;
@@ -43,7 +42,7 @@ const register = async (req, res) => {
     await admin.save();
 
     const token = generateToken(admin._id);
-    const adminData = admin.getPublicProfile();
+    const adminData = admin.getPublicProfile ? admin.getPublicProfile() : admin.toObject();
 
     res.status(201).json({
       success: true,
@@ -71,7 +70,7 @@ const login = async (req, res) => {
     if (admin.isBanned) {
       return res.status(403).json({ success: false, message: 'Your account has been banned. Please contact support.' });
     }
-    if (!admin.isActive) {
+    if (typeof admin.isActive !== "undefined" && !admin.isActive) {
       return res.status(403).json({ success: false, message: 'Your account is not active. Please contact support.' });
     }
     const isPasswordValid = await admin.comparePassword(password);
@@ -82,7 +81,7 @@ const login = async (req, res) => {
     await admin.save();
 
     const token = generateToken(admin._id);
-    const adminData = admin.getPublicProfile();
+    const adminData = admin.getPublicProfile ? admin.getPublicProfile() : admin.toObject();
 
     res.json({
       success: true,
@@ -98,16 +97,13 @@ const login = async (req, res) => {
 // Get admin profile (protected route)
 const getProfile = async (req, res) => {
   try {
-    const admin = await Admin.findById(req.admin._id)
-      .select('-password');
-    
+    const admin = await Admin.findById(req.admin._id).select('-password');
     if (!admin) {
       return res.status(404).json({
         success: false,
         message: 'Admin not found'
       });
     }
-    
     res.json({
       success: true,
       data: { admin }
@@ -120,7 +116,6 @@ const getProfile = async (req, res) => {
     });
   }
 };
-
 
 // Update admin profile controller (covers all fields)
 const updateAdminProfile = async (req, res) => {
@@ -141,7 +136,6 @@ const updateAdminProfile = async (req, res) => {
       badges,
       favoritePlayers,
       favoriteLeagues,
-      profileUpdatedAt,
       coverPhoto,
       preferences,
       avatar,
@@ -151,28 +145,28 @@ const updateAdminProfile = async (req, res) => {
     } = req.body;
 
     const updateData = {};
-    if (firstName) updateData.firstName = firstName;
-    if (lastName) updateData.lastName = lastName;
-    if (phone) updateData.phone = phone;
+    if (firstName !== undefined) updateData.firstName = firstName;
+    if (lastName !== undefined) updateData.lastName = lastName;
+    if (phone !== undefined) updateData.phone = phone;
     if (bio !== undefined) updateData.bio = bio;
-    if (socialLinks) updateData.socialLinks = socialLinks;
-    if (birthdate) updateData.birthdate = birthdate;
-    if (gender) updateData.gender = gender;
-    if (location) updateData.location = location;
-    if (address) updateData.address = address;
-    if (theme) updateData.theme = theme;
-    if (language) updateData.language = language;
+    if (socialLinks !== undefined) updateData.socialLinks = socialLinks;
+    if (birthdate !== undefined) updateData.birthdate = birthdate;
+    if (gender !== undefined) updateData.gender = gender;
+    if (location !== undefined) updateData.location = location;
+    if (address !== undefined) updateData.address = address;
+    if (theme !== undefined) updateData.theme = theme;
+    if (language !== undefined) updateData.language = language;
     if (Array.isArray(achievements)) updateData.achievements = achievements;
     if (Array.isArray(badges)) updateData.badges = badges;
     if (Array.isArray(favoritePlayers)) updateData.favoritePlayers = favoritePlayers;
     if (Array.isArray(favoriteLeagues)) updateData.favoriteLeagues = favoriteLeagues;
     updateData.profileUpdatedAt = new Date();
-    if (coverPhoto) updateData.coverPhoto = coverPhoto;
-    if (preferences) updateData.preferences = preferences;
-    if (avatar) updateData.avatar = avatar;
+    if (coverPhoto !== undefined) updateData.coverPhoto = coverPhoto;
+    if (preferences !== undefined) updateData.preferences = preferences;
+    if (avatar !== undefined) updateData.avatar = avatar;
     if (Array.isArray(followedTeams)) updateData.followedTeams = followedTeams;
     if (Array.isArray(followedStates)) updateData.followedStates = followedStates;
-    if (timezone) updateData.timezone = timezone;
+    if (timezone !== undefined) updateData.timezone = timezone;
 
     const admin = await Admin.findByIdAndUpdate(
       req.admin._id,
@@ -194,11 +188,160 @@ const updateAdminProfile = async (req, res) => {
   }
 };
 
-module.exports = { updateAdminProfile }
+// Change password
+const changePassword = async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({
+        success: false,
+        message: "Please provide current and new password",
+      });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({
+        success: false,
+        message: "New password must be at least 6 characters long",
+      });
+    }
+
+    const admin = await Admin.findById(req.admin._id);
+    if (!admin) {
+      return res.status(404).json({
+        success: false,
+        message: "Admin not found",
+      });
+    }
+
+    // Verify current password
+    const isCurrentPasswordValid = await admin.comparePassword(currentPassword);
+    if (!isCurrentPasswordValid) {
+      return res.status(400).json({
+        success: false,
+        message: "Current password is incorrect",
+      });
+    }
+
+    // Update password
+    admin.password = newPassword;
+    await admin.save();
+
+    res.json({
+      success: true,
+      message: "Password changed successfully",
+    });
+  } catch (error) {
+    console.error("Change password error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server error while changing password",
+    });
+  }
+}
+
+// Forgot password
+const forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        message: "Please provide admin email address",
+      });
+    }
+
+    const admin = await Admin.findOne({ email: email.toLowerCase() });
+    if (!admin) {
+      return res.status(404).json({
+        success: false,
+        message: "No admin found with this email address",
+      });
+    }
+
+    // Generate reset token
+    const resetToken = crypto.randomBytes(32).toString("hex");
+    admin.passwordResetToken = crypto.createHash("sha256").update(resetToken).digest("hex");
+    admin.passwordResetExpires = Date.now() + 10 * 60 * 1000; // 10 minutes
+
+    await admin.save();
+
+    // In a real application, send email with reset link
+    res.json({
+      success: true,
+      message: "Password reset token sent to your admin email",
+      resetToken, // Remove this in production
+    });
+  } catch (error) {
+    console.error("Forgot password error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server error while processing forgot password request",
+    });
+  }
+}
+
+// Reset password
+const resetPassword = async (req, res) => {
+  try {
+    const { token, newPassword } = req.body;
+
+    if (!token || !newPassword) {
+      return res.status(400).json({
+        success: false,
+        message: "Please provide reset token and new password",
+      });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({
+        success: false,
+        message: "New password must be at least 6 characters long",
+      });
+    }
+
+    // Hash the token and find admin
+    const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
+    const admin = await Admin.findOne({
+      passwordResetToken: hashedToken,
+      passwordResetExpires: { $gt: Date.now() },
+    });
+
+    if (!admin) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid or expired reset token",
+      });
+    }
+
+    // Update password
+    admin.password = newPassword;
+    admin.passwordResetToken = undefined;
+    admin.passwordResetExpires = undefined;
+
+    await admin.save();
+
+    res.json({
+      success: true,
+      message: "Password reset successfully",
+    });
+  } catch (error) {
+    console.error("Reset password error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server error while resetting password",
+    });
+  }
+}
 
 module.exports = {
   register,
   login,
   getProfile,
   updateAdminProfile,
-}
+  resetPassword,
+  forgotPassword,
+  changePassword,
+};
