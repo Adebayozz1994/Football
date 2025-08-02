@@ -57,7 +57,6 @@ export default function AdminSettingsPage() {
     email: "",
   })
   const [isForgotLoading, setIsForgotLoading] = useState(false)
-  const [resetToken, setResetToken] = useState("")
   const [resetPasswordForm, setResetPasswordForm] = useState({
     token: "",
     newPassword: "",
@@ -171,10 +170,10 @@ export default function AdminSettingsPage() {
       } else {
         toast({
           title: "Check Your Email",
-          description: "A reset token has been sent to your email address.",
+          description: "A password reset link has been sent to your email address. Please check your email and follow the instructions.",
           action: <CheckCircle className="text-green-500" />,
         })
-        setResetToken(data.resetToken || "")
+        setForgotPasswordForm({ email: "" })
       }
     } catch (error) {
       toast({
@@ -392,9 +391,6 @@ export default function AdminSettingsPage() {
                     <TabsTrigger value="forgot-password" className="data-[state=active]:bg-yellow-400 data-[state=active]:text-black text-yellow-400">
                       <RefreshCcw className="h-4 w-4 mr-2 inline" /> Forgot Password
                     </TabsTrigger>
-                    <TabsTrigger value="reset-password" className="data-[state=active]:bg-yellow-400 data-[state=active]:text-black text-yellow-400">
-                      <Lock className="h-4 w-4 mr-2 inline" /> Reset Password
-                    </TabsTrigger>
                   </TabsList>
                   {/* Change Password */}
                   <TabsContent value="change-password" className="mt-2">
@@ -459,57 +455,13 @@ export default function AdminSettingsPage() {
                         ) : (
                           <div className="flex items-center">
                             <RefreshCcw className="mr-2 h-4 w-4" />
-                            Send Reset Token
-                          </div>
-                        )}
-                      </Button>
-                    </form>
-                    {resetToken && (
-                      <div className="mt-4 p-2 bg-gray-900 border border-yellow-400 rounded text-yellow-400 text-xs">
-                        <span className="font-bold">Reset Token (dev only):</span> {resetToken}
-                      </div>
-                    )}
-                  </TabsContent>
-                  {/* Reset Password */}
-                  <TabsContent value="reset-password" className="mt-2">
-                    <form onSubmit={handleResetPassword} className="space-y-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="token" className="text-white">Reset Token</Label>
-                        <Input
-                          id="token"
-                          type="text"
-                          value={resetPasswordForm.token}
-                          onChange={handleResetPasswordChange}
-                          className="bg-gray-900 border-yellow-400/30 text-white"
-                          autoComplete="off"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="newPassword" className="text-white">New Password</Label>
-                        <Input
-                          id="newPassword"
-                          type="password"
-                          value={resetPasswordForm.newPassword}
-                          onChange={handleResetPasswordChange}
-                          className="bg-gray-900 border-yellow-400/30 text-white"
-                          autoComplete="new-password"
-                        />
-                      </div>
-                      <Button type="submit" className="btn-gold w-full" disabled={isResetLoading}>
-                        {isResetLoading ? (
-                          <div className="flex items-center">
-                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-black mr-2"></div>
-                            Resetting...
-                          </div>
-                        ) : (
-                          <div className="flex items-center">
-                            <Lock className="mr-2 h-4 w-4" />
-                            Reset Password
+                            Send Reset Link
                           </div>
                         )}
                       </Button>
                     </form>
                   </TabsContent>
+
                 </Tabs>
               </CardContent>
             </Card>

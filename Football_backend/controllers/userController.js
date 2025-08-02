@@ -2,6 +2,7 @@ const User = require('../models/User');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
+const nodemailer = require('nodemailer');
 
 
 // Generate JWT token
@@ -244,98 +245,113 @@ const changePassword = async (req, res) => {
 // Forgot password
 const forgotPassword = async (req, res) => {
   try {
-    const { email } = req.body;
-    
+    const { email } = req.body
+
     if (!email) {
-      return res.status(400).json({
-        success: false,
-        message: 'Please provide email address'
-      });
+      return res.status(400).json({ success: false, message: "Please provide user email address" })
     }
-    
-    const user = await User.findOne({ email: email.toLowerCase() });
+
+    const user = await User.findOne({ email: email.toLowerCase() })
     if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'No user found with this email address'
-      });
+      return res.status(404).json({ success: false, message: "No user found with this email address" })
     }
-    
+
     // Generate reset token
-    const resetToken = crypto.randomBytes(32).toString('hex');
-    user.passwordResetToken = crypto.createHash('sha256').update(resetToken).digest('hex');
-    user.passwordResetExpires = Date.now() + 10 * 60 * 1000; // 10 minutes
-    
-    await user.save();
-    
-    // In a real application, send email with reset link
-    // For now, we'll just return the token (remove in production)
+    const resetToken = crypto.randomBytes(32).toString("hex")
+    user.passwordResetToken = crypto.createHash("sha256").update(resetToken).digest("hex")
+    user.passwordResetExpires = Date.now() + 10 * 60 * 1000 // 10 minutes
+
+    await user.save()
+
+    // Send reset email
+    const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/reset-password?token=${resetToken}`
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS,
+      },
+    })
+
+    const mailOptions = {
+      from: `"Football Hub Support" <${process.env.EMAIL_USER}>`,
+      to: user.email,
+      subject: "User Password Reset",
+      html: `
+        <p>Hello ${user.firstName || "User"},</p>
+        <p>You requested a password reset for your Football Hub account.</p>
+        <p>Click the link below to reset your password:</p>
+        <p><a href="${resetUrl}" style="color:#FFD700;font-weight:bold;">Reset Password</a></p>
+        <p>This link will expire in 10 minutes.</p>
+        <p>If you did not request this, please ignore.</p>
+      `,
+    }
+
+    await transporter.sendMail(mailOptions)
+
     res.json({
       success: true,
-      message: 'Password reset token sent to your email',
-      resetToken // Remove this in production
-    });
+      message: "Password reset email sent to your email address.",
+    })
   } catch (error) {
-    console.error('Forgot password error:', error);
+    console.error("Forgot password error:", error)
     res.status(500).json({
       success: false,
-      message: 'Server error while processing forgot password request'
-    });
+      message: "Server error while processing forgot password request",
+    })
   }
-};
+}
 
-// Reset password
+// Reset password (from email link)
 const resetPassword = async (req, res) => {
   try {
-    const { token, newPassword } = req.body;
-    
+    const { token, newPassword } = req.body
+
     if (!token || !newPassword) {
       return res.status(400).json({
         success: false,
-        message: 'Please provide reset token and new password'
-      });
+        message: "Please provide reset token and new password",
+      })
     }
-    
+
     if (newPassword.length < 6) {
       return res.status(400).json({
         success: false,
-        message: 'New password must be at least 6 characters long'
-      });
+        message: "New password must be at least 6 characters long",
+      })
     }
-    
-    // Hash the token and find user
-    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+
+    const hashedToken = crypto.createHash("sha256").update(token).digest("hex")
     const user = await User.findOne({
       passwordResetToken: hashedToken,
-      passwordResetExpires: { $gt: Date.now() }
-    });
-    
+      passwordResetExpires: { $gt: Date.now() },
+    })
+
     if (!user) {
       return res.status(400).json({
         success: false,
-        message: 'Invalid or expired reset token'
-      });
+        message: "Invalid or expired reset token",
+      })
     }
-    
-    // Update password
-    user.password = newPassword;
-    user.passwordResetToken = undefined;
-    user.passwordResetExpires = undefined;
-    
-    await user.save();
-    
+
+    user.password = newPassword
+    user.passwordResetToken = undefined
+    user.passwordResetExpires = undefined
+    await user.save()
+
     res.json({
       success: true,
-      message: 'Password reset successfully'
-    });
+      message: "Password reset successfully",
+    })
   } catch (error) {
-    console.error('Reset password error:', error);
+    console.error("Reset password error:", error)
     res.status(500).json({
       success: false,
-      message: 'Server error while resetting password'
-    });
+      message: "Server error while resetting password",
+    })
   }
-};
+}
+
 
 // Social login (placeholder)
 const socialLogin = async (req, res) => {

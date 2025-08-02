@@ -172,12 +172,6 @@ export default function UserSettingsPage() {
             >
               <RefreshCcw className="h-4 w-4 mr-2 inline" /> Forgot Password
             </TabsTrigger>
-            <TabsTrigger
-              value="reset-password"
-              className="data-[state=active]:bg-yellow-400 data-[state=active]:text-black text-yellow-400"
-            >
-              <Lock className="h-4 w-4 mr-2 inline" /> Reset Password
-            </TabsTrigger>
           </TabsList>
           {/* Change Password */}
           <TabsContent value="change-password" className="mt-2">
@@ -270,57 +264,6 @@ export default function UserSettingsPage() {
                     <span className="font-bold">Reset Token (dev only):</span> {resetToken}
                   </div>
                 )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-          {/* Reset Password */}
-          <TabsContent value="reset-password" className="mt-2">
-            <Card className="card-black-gold">
-              <CardHeader>
-                <CardTitle className="text-white">Reset Password</CardTitle>
-                <CardDescription className="text-gray-400">
-                  Enter your reset token and new password.
-                </CardDescription>
-              </CardHeader>
-              <Separator className="bg-yellow-400/20" />
-              <CardContent className="space-y-6 mt-6">
-                <form onSubmit={handleResetPassword} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="token" className="text-white">Reset Token</Label>
-                    <Input
-                      id="token"
-                      type="text"
-                      value={resetPasswordForm.token}
-                      onChange={handleResetPasswordChange}
-                      className="bg-gray-900 border-yellow-400/30 text-white"
-                      autoComplete="off"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="newPassword" className="text-white">New Password</Label>
-                    <Input
-                      id="newPassword"
-                      type="password"
-                      value={resetPasswordForm.newPassword}
-                      onChange={handleResetPasswordChange}
-                      className="bg-gray-900 border-yellow-400/30 text-white"
-                      autoComplete="new-password"
-                    />
-                  </div>
-                  <Button type="submit" className="btn-gold w-full" disabled={isResetLoading}>
-                    {isResetLoading ? (
-                      <div className="flex items-center">
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-black mr-2"></div>
-                        Resetting...
-                      </div>
-                    ) : (
-                      <div className="flex items-center">
-                        <Lock className="mr-2 h-4 w-4" />
-                        Reset Password
-                      </div>
-                    )}
-                  </Button>
-                </form>
               </CardContent>
             </Card>
           </TabsContent>

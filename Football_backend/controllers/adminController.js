@@ -2,6 +2,7 @@ const Admin = require('../models/Admin');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
+const nodemailer = require('nodemailer');
 
 // Generate JWT token
 const generateToken = (adminId) => {
@@ -247,18 +248,12 @@ const forgotPassword = async (req, res) => {
     const { email } = req.body;
 
     if (!email) {
-      return res.status(400).json({
-        success: false,
-        message: "Please provide admin email address",
-      });
+      return res.status(400).json({ success: false, message: "Please provide admin email address" });
     }
 
     const admin = await Admin.findOne({ email: email.toLowerCase() });
     if (!admin) {
-      return res.status(404).json({
-        success: false,
-        message: "No admin found with this email address",
-      });
+      return res.status(404).json({ success: false, message: "No admin found with this email address" });
     }
 
     // Generate reset token
@@ -268,11 +263,35 @@ const forgotPassword = async (req, res) => {
 
     await admin.save();
 
-    // In a real application, send email with reset link
+    // Send reset email
+    const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/admin/reset-password?token=${resetToken}`;
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: process.env.EMAIL_USER, // your email
+        pass: process.env.EMAIL_PASS, // your app password
+      },
+    });
+
+    const mailOptions = {
+      from: `"Football Hub Support" <${process.env.EMAIL_USER}>`,
+      to: admin.email,
+      subject: "Admin Password Reset",
+      html: `
+        <p>Hello ${admin.firstName},</p>
+        <p>You requested a password reset for your admin account.</p>
+        <p>Click the link below to reset your password:</p>
+        <p><a href="${resetUrl}" style="color:#FFD700;font-weight:bold;">Reset Password</a></p>
+        <p>This link will expire in 10 minutes.</p>
+        <p>If you did not request this, please ignore.</p>
+      `,
+    };
+
+    await transporter.sendMail(mailOptions);
+
     res.json({
       success: true,
-      message: "Password reset token sent to your admin email",
-      resetToken, // Remove this in production
+      message: "Password reset email sent to your admin email.",
     });
   } catch (error) {
     console.error("Forgot password error:", error);
@@ -281,9 +300,9 @@ const forgotPassword = async (req, res) => {
       message: "Server error while processing forgot password request",
     });
   }
-}
+};
 
-// Reset password
+// Reset password (from email link)
 const resetPassword = async (req, res) => {
   try {
     const { token, newPassword } = req.body;
@@ -335,6 +354,7 @@ const resetPassword = async (req, res) => {
     });
   }
 }
+
 
 module.exports = {
   register,
