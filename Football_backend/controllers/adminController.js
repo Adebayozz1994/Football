@@ -3,6 +3,8 @@ const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const nodemailer = require('nodemailer');
+const cloudinary = require('../utils/cloudinary');
+const streamifier = require('streamifier');
 
 // Generate JWT token
 const generateToken = (adminId) => {
@@ -121,53 +123,67 @@ const getProfile = async (req, res) => {
 // Update admin profile controller (covers all fields)
 const updateAdminProfile = async (req, res) => {
   try {
-    const {
-      firstName,
-      lastName,
-      phone,
-      bio,
-      socialLinks,
-      birthdate,
-      gender,
-      location,
-      address,
-      theme,
-      language,
-      achievements,
-      badges,
-      favoritePlayers,
-      favoriteLeagues,
-      coverPhoto,
-      preferences,
-      avatar,
-      followedTeams,
-      followedStates,
-      timezone,
-    } = req.body;
+    const updateData = { profileUpdatedAt: new Date() };
 
-    const updateData = {};
-    if (firstName !== undefined) updateData.firstName = firstName;
-    if (lastName !== undefined) updateData.lastName = lastName;
-    if (phone !== undefined) updateData.phone = phone;
-    if (bio !== undefined) updateData.bio = bio;
-    if (socialLinks !== undefined) updateData.socialLinks = socialLinks;
-    if (birthdate !== undefined) updateData.birthdate = birthdate;
-    if (gender !== undefined) updateData.gender = gender;
-    if (location !== undefined) updateData.location = location;
-    if (address !== undefined) updateData.address = address;
-    if (theme !== undefined) updateData.theme = theme;
-    if (language !== undefined) updateData.language = language;
-    if (Array.isArray(achievements)) updateData.achievements = achievements;
-    if (Array.isArray(badges)) updateData.badges = badges;
-    if (Array.isArray(favoritePlayers)) updateData.favoritePlayers = favoritePlayers;
-    if (Array.isArray(favoriteLeagues)) updateData.favoriteLeagues = favoriteLeagues;
-    updateData.profileUpdatedAt = new Date();
-    if (coverPhoto !== undefined) updateData.coverPhoto = coverPhoto;
-    if (preferences !== undefined) updateData.preferences = preferences;
-    if (avatar !== undefined) updateData.avatar = avatar;
-    if (Array.isArray(followedTeams)) updateData.followedTeams = followedTeams;
-    if (Array.isArray(followedStates)) updateData.followedStates = followedStates;
-    if (timezone !== undefined) updateData.timezone = timezone;
+    // Fields from text
+    if (req.body.firstName !== undefined) updateData.firstName = req.body.firstName;
+    if (req.body.lastName !== undefined) updateData.lastName = req.body.lastName;
+    if (req.body.phone !== undefined) updateData.phone = req.body.phone;
+    if (req.body.bio !== undefined) updateData.bio = req.body.bio;
+    if (req.body.socialLinks !== undefined) updateData.socialLinks = req.body.socialLinks;
+    if (req.body.birthdate !== undefined) updateData.birthdate = req.body.birthdate;
+    if (req.body.gender !== undefined) updateData.gender = req.body.gender;
+    if (req.body.location !== undefined) updateData.location = req.body.location;
+    if (req.body.address !== undefined) updateData.address = req.body.address;
+    if (req.body.theme !== undefined) updateData.theme = req.body.theme;
+    if (req.body.language !== undefined) updateData.language = req.body.language;
+    if (req.body.coverPhoto !== undefined) updateData.coverPhoto = req.body.coverPhoto;
+    if (req.body.preferences !== undefined) updateData.preferences = req.body.preferences;
+    if (req.body.timezone !== undefined) updateData.timezone = req.body.timezone;
+
+    // Parse arrays sent as comma-separated strings
+    if (req.body.achievements !== undefined)
+      updateData.achievements = typeof req.body.achievements === 'string'
+        ? req.body.achievements.split(',').map(v => v.trim()).filter(Boolean)
+        : req.body.achievements;
+    if (req.body.badges !== undefined)
+      updateData.badges = typeof req.body.badges === 'string'
+        ? req.body.badges.split(',').map(v => v.trim()).filter(Boolean)
+        : req.body.badges;
+    if (req.body.favoritePlayers !== undefined)
+      updateData.favoritePlayers = typeof req.body.favoritePlayers === 'string'
+        ? req.body.favoritePlayers.split(',').map(v => v.trim()).filter(Boolean)
+        : req.body.favoritePlayers;
+    if (req.body.favoriteLeagues !== undefined)
+      updateData.favoriteLeagues = typeof req.body.favoriteLeagues === 'string'
+        ? req.body.favoriteLeagues.split(',').map(v => v.trim()).filter(Boolean)
+        : req.body.favoriteLeagues;
+    if (req.body.followedTeams !== undefined)
+      updateData.followedTeams = typeof req.body.followedTeams === 'string'
+        ? req.body.followedTeams.split(',').map(v => v.trim()).filter(Boolean)
+        : req.body.followedTeams;
+    if (req.body.followedStates !== undefined)
+      updateData.followedStates = typeof req.body.followedStates === 'string'
+        ? req.body.followedStates.split(',').map(v => v.trim()).filter(Boolean)
+        : req.body.followedStates;
+
+    // Handle avatar upload (if file present)
+    if (req.file) {
+      const streamUpload = (fileBuffer) => {
+        return new Promise((resolve, reject) => {
+          const stream = cloudinary.uploader.upload_stream(
+            { folder: 'avatars' },
+            (error, result) => {
+              if (result) resolve(result);
+              else reject(error);
+            }
+          );
+          streamifier.createReadStream(fileBuffer).pipe(stream);
+        });
+      };
+      const result = await streamUpload(req.file.buffer);
+      updateData.avatar = result.secure_url;
+    }
 
     const admin = await Admin.findByIdAndUpdate(
       req.admin._id,
@@ -175,11 +191,12 @@ const updateAdminProfile = async (req, res) => {
       { new: true, runValidators: true }
     ).select('-password');
 
-    res.json({
+    return res.json({
       success: true,
       message: 'Profile updated successfully',
       data: { admin }
     });
+
   } catch (error) {
     console.error('Update admin profile error:', error);
     res.status(500).json({
@@ -355,6 +372,49 @@ const resetPassword = async (req, res) => {
   }
 }
 
+// const updateAdminPicture = async (req, res) => {
+//   try {
+//     const updateData = { ...req.body, profileUpdatedAt: new Date() };
+
+//     // Handle avatar upload (if there is a file)
+//     if (req.file) {
+//       // Upload buffer to Cloudinary
+//       const streamUpload = (fileBuffer) => {
+//         return new Promise((resolve, reject) => {
+//           const stream = cloudinary.uploader.upload_stream(
+//             { folder: 'avatars' },
+//             (error, result) => {
+//               if (result) resolve(result);
+//               else reject(error);
+//             }
+//           );
+//           streamifier.createReadStream(fileBuffer).pipe(stream);
+//         });
+//       };
+
+//       const result = await streamUpload(req.file.buffer);
+//       updateData.avatar = result.secure_url; // Save Cloudinary image URL
+//     }
+
+//     const admin = await Admin.findByIdAndUpdate(
+//       req.admin._id,
+//       updateData,
+//       { new: true, runValidators: true }
+//     ).select('-password');
+
+//     res.json({
+//       success: true,
+//       message: 'Profile updated successfully',
+//       data: { admin }
+//     });
+//   } catch (error) {
+//     console.error('Update admin profile error:', error);
+//     res.status(500).json({
+//       success: false,
+//       message: 'Server error while updating admin profile'
+//     });
+//   }
+// };
 
 module.exports = {
   register,

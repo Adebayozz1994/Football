@@ -3,6 +3,8 @@ const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const nodemailer = require('nodemailer');
+const cloudinary = require('../utils/cloudinary');
+const streamifier = require('streamifier');
 
 
 // Generate JWT token
@@ -123,58 +125,54 @@ const getProfile = async (req, res) => {
   }
 };
 
-// Update user profile controller (covers all fields)
+// Update user profile (with avatar upload if present)
 const updateProfile = async (req, res) => {
   try {
-    // Destructure all updatable fields from req.body
-    const {
-      firstName,
-      lastName,
-      phone,
-      bio,
-      socialLinks,
-      birthdate,
-      gender,
-      location,
-      address,
-      theme,
-      language,
-      achievements,
-      badges,
-      favoritePlayers,
-      favoriteLeagues,
-      profileUpdatedAt,
-      coverPhoto,
-      preferences,
-      avatar,
-      followedTeams,
-      followedStates
-    } = req.body;
+    const updateData = { profileUpdatedAt: new Date() };
 
-    // Build the updateData object (only update if provided)
-    const updateData = {};
-    if (firstName) updateData.firstName = firstName;
-    if (lastName) updateData.lastName = lastName;
-    if (phone) updateData.phone = phone;
-    if (bio !== undefined) updateData.bio = bio;
-    if (socialLinks) updateData.socialLinks = socialLinks;
-    if (birthdate) updateData.birthdate = birthdate;
-    if (gender) updateData.gender = gender;
-    if (location) updateData.location = location;
-    if (address) updateData.address = address;
-    if (theme) updateData.theme = theme;
-    if (language) updateData.language = language;
-    if (Array.isArray(achievements)) updateData.achievements = achievements;
-    if (Array.isArray(badges)) updateData.badges = badges;
-    if (Array.isArray(favoritePlayers)) updateData.favoritePlayers = favoritePlayers;
-    if (Array.isArray(favoriteLeagues)) updateData.favoriteLeagues = favoriteLeagues;
-    updateData.profileUpdatedAt = new Date();
-    if (coverPhoto) updateData.coverPhoto = coverPhoto;
-    if (preferences) updateData.preferences = preferences;
-    if (avatar) updateData.avatar = avatar;
-    if (Array.isArray(followedTeams)) updateData.followedTeams = followedTeams;
-    if (Array.isArray(followedStates)) updateData.followedStates = followedStates;
+    // Simple fields
+    if (req.body.firstName !== undefined) updateData.firstName = req.body.firstName;
+    if (req.body.lastName !== undefined) updateData.lastName = req.body.lastName;
+    if (req.body.phone !== undefined) updateData.phone = req.body.phone;
+    if (req.body.bio !== undefined) updateData.bio = req.body.bio;
+    if (req.body.socialLinks !== undefined) updateData.socialLinks = req.body.socialLinks;
+    if (req.body.birthdate !== undefined) updateData.birthdate = req.body.birthdate;
+    if (req.body.gender !== undefined) updateData.gender = req.body.gender;
+    if (req.body.location !== undefined) updateData.location = req.body.location;
+    if (req.body.address !== undefined) updateData.address = req.body.address;
+    if (req.body.theme !== undefined) updateData.theme = req.body.theme;
+    if (req.body.language !== undefined) updateData.language = req.body.language;
+    if (req.body.coverPhoto !== undefined) updateData.coverPhoto = req.body.coverPhoto;
+    if (req.body.preferences !== undefined) updateData.preferences = req.body.preferences;
 
+    // Array fields (accept comma-separated or array)
+    const parseArray = (v) => typeof v === "string" ? v.split(',').map(i => i.trim()).filter(Boolean) : v;
+    if (req.body.achievements !== undefined) updateData.achievements = parseArray(req.body.achievements);
+    if (req.body.badges !== undefined) updateData.badges = parseArray(req.body.badges);
+    if (req.body.favoritePlayers !== undefined) updateData.favoritePlayers = parseArray(req.body.favoritePlayers);
+    if (req.body.favoriteLeagues !== undefined) updateData.favoriteLeagues = parseArray(req.body.favoriteLeagues);
+    if (req.body.followedTeams !== undefined) updateData.followedTeams = parseArray(req.body.followedTeams);
+    if (req.body.followedStates !== undefined) updateData.followedStates = parseArray(req.body.followedStates);
+
+    // Avatar upload (if file present)
+    if (req.file) {
+      const streamUpload = (fileBuffer) => {
+        return new Promise((resolve, reject) => {
+          const stream = cloudinary.uploader.upload_stream(
+            { folder: 'avatars' },
+            (error, result) => {
+              if (result) resolve(result);
+              else reject(error);
+            }
+          );
+          streamifier.createReadStream(fileBuffer).pipe(stream);
+        });
+      };
+      const result = await streamUpload(req.file.buffer);
+      updateData.avatar = result.secure_url;
+    }
+
+    // Update user
     const user = await User.findByIdAndUpdate(
       req.user._id,
       updateData,

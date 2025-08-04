@@ -2,7 +2,7 @@
 
 import { Skeleton } from "@/components/ui/skeleton"
 import type React from "react"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
@@ -23,8 +23,6 @@ import {
   Camera,
   Activity,
   LogIn,
-  ShieldCheck,
-  ListChecks,
   Newspaper,
   Users,
 } from "lucide-react"
@@ -56,6 +54,7 @@ export default function AdminProfilePage() {
   })
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
+  const avatarFileRef = useRef<File | null>(null)
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -142,32 +141,33 @@ export default function AdminProfilePage() {
     if (!user) return
     try {
       const token = typeof window !== "undefined" ? localStorage.getItem("admin_token") : null
-      const payload = {
-        firstName: formData.full_name.split(" ")[0],
-        lastName: formData.full_name.split(" ").slice(1).join(" "),
-        phone: formData.phone,
-        bio: formData.bio,
-        location: formData.location,
-        birthdate: formData.birthdate,
-        avatar: formData.avatar_url,
-        gender: formData.gender,
-        address: formData.address,
-        theme: formData.theme,
-        language: formData.language,
-        achievements: formData.achievements.split(",").map((v) => v.trim()).filter(Boolean),
-        badges: formData.badges.split(",").map((v) => v.trim()).filter(Boolean),
-        favoritePlayers: formData.favoritePlayers.split(",").map((v) => v.trim()).filter(Boolean),
-        favoriteLeagues: formData.favoriteLeagues.split(",").map((v) => v.trim()).filter(Boolean),
-        coverPhoto: formData.coverPhoto,
-        timezone: formData.timezone,
+      const fd = new FormData()
+      fd.append("firstName", formData.full_name.split(" ")[0])
+      fd.append("lastName", formData.full_name.split(" ").slice(1).join(" "))
+      fd.append("phone", formData.phone)
+      fd.append("bio", formData.bio)
+      fd.append("location", formData.location)
+      fd.append("birthdate", formData.birthdate)
+      fd.append("gender", formData.gender)
+      fd.append("address", formData.address)
+      fd.append("theme", formData.theme)
+      fd.append("language", formData.language)
+      fd.append("achievements", formData.achievements)
+      fd.append("badges", formData.badges)
+      fd.append("favoritePlayers", formData.favoritePlayers)
+      fd.append("favoriteLeagues", formData.favoriteLeagues)
+      fd.append("coverPhoto", formData.coverPhoto)
+      fd.append("timezone", formData.timezone)
+      if (avatarFileRef.current) {
+        fd.append("avatar", avatarFileRef.current)
       }
       const res = await fetch("http://localhost:5000/api/admin/profile", {
         method: "PUT",
         headers: {
-          "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
+          // DO NOT SET Content-Type when using FormData
         },
-        body: JSON.stringify(payload),
+        body: fd,
       })
       const data = await res.json()
       if (!res.ok || !data.success) {
@@ -178,7 +178,16 @@ export default function AdminProfilePage() {
           action: <XCircle className="text-red-500" />,
         })
       } else {
-        setProfile((prev: any) => ({ ...prev, ...formData }))
+        setProfile((prev: any) => ({
+          ...prev,
+          ...formData,
+          avatar_url: data.data.admin.avatar || formData.avatar_url,
+        }))
+        setFormData((prev) => ({
+          ...prev,
+          avatar_url: data.data.admin.avatar || prev.avatar_url,
+        }))
+        avatarFileRef.current = null
         toast({
           title: "Profile Updated",
           description: "Your profile has been successfully updated.",
@@ -200,12 +209,14 @@ export default function AdminProfilePage() {
   const handleCancel = () => {
     if (profile) {
       setFormData({ ...profile, email: user?.email || "" })
+      avatarFileRef.current = null
     }
     setIsEditing(false)
   }
 
-  const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (!event.target.files || event.target.files.length === 0) {
+  const handleAvatarUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files
+    if (!files || files.length === 0) {
       toast({
         title: "No file selected",
         description: "Please select an image to upload.",
@@ -213,27 +224,11 @@ export default function AdminProfilePage() {
       })
       return
     }
-    const file = event.target.files[0]
-    setIsSaving(true)
-    try {
-      // Simulate file upload
-      await new Promise(resolve => setTimeout(resolve, 2000))
-      const mockUrl = "/placeholder-user.jpg"
-      setProfile((prev: any) => ({ ...prev, avatar_url: mockUrl }))
-      setFormData((prev) => ({ ...prev, avatar_url: mockUrl }))
-      toast({
-        title: "Avatar Updated",
-        description: "Your profile picture has been updated.",
-        action: <CheckCircle className="text-green-500" />,
-      })
-    } catch (error) {
-      toast({
-        title: "Upload Failed",
-        description: "Failed to upload avatar. Please try again.",
-        variant: "destructive",
-      })
-    }
-    setIsSaving(false)
+    avatarFileRef.current = files[0]
+    setFormData((prev) => ({
+      ...prev,
+      avatar_url: URL.createObjectURL(files[0]),
+    }))
   }
 
   if (isLoading) {

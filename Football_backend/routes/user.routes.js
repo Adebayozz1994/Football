@@ -1,6 +1,7 @@
 const express = require('express');
 const userController = require('../controllers/userController');
 const { authenticateToken, optionalAuth, rateLimit } = require('../middlewares/auth');
+const upload = require('../middlewares/uploads');
 
 const router = express.Router();
 
@@ -15,7 +16,7 @@ router.post('/social-login', rateLimit(15 * 60 * 1000, 10), userController.socia
 router.use(authenticateToken);
 
 router.get('/profile', userController.getProfile);
-router.put('/profile', userController.updateProfile);
+router.put('/profile', authenticateToken, upload.single('avatar'), userController.updateProfile);
 router.put('/change-password', userController.changePassword);
 router.post('/upload-avatar', userController.uploadAvatar);
 router.delete('/delete-account', userController.deleteAccount);
