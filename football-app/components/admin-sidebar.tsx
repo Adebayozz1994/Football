@@ -28,9 +28,7 @@ const menuItems = [
     title: "Match Management",
     icon: Trophy,
     items: [
-      { title: "All Matches", url: "/admin/matches" },
-      { title: "Create Match", url: "/admin/matches/create" },
-      { title: "Live Updates", url: "/admin/matches/live" },
+      { title: "Matches", url: "/admin/matches" },
     ],
   },
   {
@@ -47,8 +45,6 @@ const menuItems = [
     icon: Newspaper,
     items: [
       { title: "All News", url: "/admin/news" },
-      { title: "Create Article", url: "/admin/news/create" },
-      { title: "Categories", url: "/admin/news/categories" },
     ],
   },
   {
