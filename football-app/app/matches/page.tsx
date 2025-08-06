@@ -214,7 +214,19 @@ export default function MatchesPage() {
       setUpdating(true)
     }
     try {
-      const response = await axios.get("http://localhost:5000/api/matches")
+      // Add query parameters for filtering
+      const params = new URLSearchParams()
+      if (selectedDate !== 'all') {
+        params.append('dateFilter', selectedDate)
+      }
+      if (selectedState !== 'all') {
+        params.append('status', selectedState)
+      }
+      if (searchTerm) {
+        params.append('search', searchTerm)
+      }
+
+      const response = await axios.get(`http://localhost:5000/api/matches?${params.toString()}`)
       const newMatches = response.data as Match[]
 
       // Compare scores and add big chance if there's a potential update
@@ -382,7 +394,7 @@ export default function MatchesPage() {
     )
   }
 
-  // Filter matches based on their status
+  // Filter and sort matches based on their status
   const filteredMatches = matches.filter((match) => {
     const matchesSearch =
       match.homeTeam.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -392,9 +404,46 @@ export default function MatchesPage() {
     const matchesStatus = selectedState === "all" || match.status === selectedState
 
     // Filter by date
-    const matchesDate = selectedDate === "all" || match.matchDate === selectedDate
+    let matchesDate = true
+    if (selectedDate !== "all") {
+      // Ensure proper date parsing by converting YYYY-MM-DD to Date object
+      const [year, month, day] = match.matchDate.split('-').map(num => parseInt(num))
+      const matchDate = new Date(year, month - 1, day) // month is 0-based in JS Date
+      
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+
+      const tomorrow = new Date(today)
+      tomorrow.setDate(tomorrow.getDate() + 1)
+
+      const weekEnd = new Date(today)
+      weekEnd.setDate(weekEnd.getDate() + 7)
+
+      // Format dates for comparison
+      const matchDateStr = matchDate.toISOString().split('T')[0]
+      const todayStr = today.toISOString().split('T')[0]
+      const tomorrowStr = tomorrow.toISOString().split('T')[0]
+
+      switch (selectedDate) {
+        case "today":
+          matchesDate = matchDateStr === todayStr
+          break
+        case "tomorrow":
+          matchesDate = matchDateStr === tomorrowStr
+          break
+        case "week":
+          matchesDate = matchDate >= today && matchDate <= weekEnd
+          break
+        default:
+          matchesDate = true
+      }
+    }
 
     return matchesSearch && matchesStatus && matchesDate
+  }).sort((a, b) => {
+    // Custom sorting order: live -> scheduled -> finished
+    const statusOrder = { live: 0, scheduled: 1, finished: 2 };
+    return statusOrder[a.status] - statusOrder[b.status];
   })
 
   const liveMatches = filteredMatches.filter((match) => match.status === "live")
