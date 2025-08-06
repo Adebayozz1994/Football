@@ -2,13 +2,22 @@
 const express = require('express');
 const cors = require('cors');
 const mongoose = require('mongoose');
+const { WebSocketServer, WebSocket } = require('ws');
 require('dotenv').config();
 const jwt = require('jsonwebtoken');
+
+// Import models to register them with Mongoose
+require('./models/User');
+require('./models/Admin');
+require('./models/Team');
+require('./models/Player');
+require('./models/Match');
+require('./models/News');
 
 const userRoutes = require('./routes/user.routes');
 const adminRoutes = require('./routes/admin.routes'); 
 // const adminRoutes = require('./routes/admin.routes');
-// const matchRoutes = require('./routes/match.routes'); 
+const matchRoutes = require('./routes/match.routes'); 
 // const newsRoutes = require('./routes/news.routes'); 
 
 
@@ -47,34 +56,63 @@ app.get('/', (req, res) => {
 app.use('/api/user', userRoutes); 
 app.use('/api/admin', adminRoutes); 
 // app.use('/api/admin', adminRoutes); 
-// app.use('/api/matches', matchRoutes); 
+app.use('/api/matches', matchRoutes); 
 // app.use('/api/news', newsRoutes);
 
 
 
-// A sample route to verify the token and fetch user details
-app.get('/api/user', (req, res) => {
-  const authHeader = req.headers.authorization;
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return res.status(401).json({ message: 'Unauthorized' });
-  }
-  const token = authHeader.split(' ')[1];
-  try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    res.json({
-      firstName: decoded.firstName,
-      lastName: decoded.lastName,
-      email: decoded.email,
-    });
-  } catch (error) {
-    res.status(401).json({ message: 'Invalid token' });
-  }
-});
-
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`Server running on PORT: ${PORT}`);
 });
 
+// Create WebSocket server
+const wss = new WebSocketServer({ server });
 
+// Store connected clients
+const clients = new Set();
+
+wss.on('connection', (ws) => {
+  console.log('New WebSocket connection');
+  clients.add(ws);
+
+  ws.on('close', () => {
+    console.log('Client disconnected');
+    clients.delete(ws);
+  });
+});
+
+// Function to broadcast updates to all connected clients
+function broadcastMatchUpdate(matchId, team, update) {
+  const message = JSON.stringify({
+    type: 'score_update',
+    matchId,
+    team,
+    update
+  });
+
+  clients.forEach(client => {
+    if (client.readyState === ws.OPEN) {
+      client.send(message);
+    }
+  });
+}
+
+// Export for use in match controller
+module.exports = { 
+  broadcastMatchUpdate: (matchId, team, update) => {
+    const message = JSON.stringify({
+      type: 'score_update',
+      matchId,
+      team,
+      update
+    });
+
+    clients.forEach(client => {
+      if (client.readyState === WebSocket.OPEN) {
+        client.send(message);
+      }
+    });
+  }
+};
 

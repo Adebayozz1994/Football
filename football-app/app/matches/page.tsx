@@ -1,6 +1,7 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import axios from "axios"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -11,77 +12,394 @@ import { Calendar, MapPin, Clock, Search, Filter, Eye, Users, Trophy } from "luc
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 
+// Types
+interface MatchEvent {
+  minute: number
+  type: "goal" | "yellow_card" | "red_card" | "substitution" | "penalty" | "var" | "injury"
+  team: "home" | "away"
+  player: string
+  description?: string
+  additionalInfo?: {
+    assistedBy?: string
+    replacedPlayer?: string // for substitutions
+    reason?: string // for cards
+  }
+}
+
+interface Match {
+  _id: string
+  homeTeam: string
+  awayTeam: string
+  homeScore: number
+  awayScore: number
+  status: "scheduled" | "live" | "finished"
+  matchDate: string
+  matchTime?: string
+  venue?: string
+  events?: MatchEvent[]
+  bigChance?: {
+    team: "home" | "away"
+    description: string
+    timestamp: number
+  }
+}
+
+// Match Details Modal Component
+const MatchDetailsModal = ({ match, onClose }: { match: Match | null; onClose: () => void }) => {
+  if (!match) return null;
+
+  const getEventIcon = (type: MatchEvent['type']) => {
+    switch (type) {
+      case 'goal':
+        return '⚽'
+      case 'yellow_card':
+        return '🟨'
+      case 'red_card':
+        return '🟥'
+      case 'substitution':
+        return '🔄'
+      case 'penalty':
+        return '⚽'
+      case 'var':
+        return '📺'
+      case 'injury':
+        return '🤕'
+      default:
+        return '•'
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-gradient-to-b from-black to-zinc-900 border-2 border-gold-400/30 rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-xl shadow-gold-400/10">
+        <div className="p-6">
+          <div className="flex justify-between items-center mb-6">
+            <div className="space-y-2">
+              <h2 className="text-2xl font-bold text-gold-400">Match Details</h2>
+              <Badge
+                className={`${
+                  match.status === "live"
+                    ? "bg-red-500 text-white animate-pulse"
+                    : match.status === "scheduled"
+                    ? "bg-gold-400 text-black"
+                    : "bg-green-600 text-white"
+                }`}
+              >
+                {match.status === "live" ? (
+                  <div className="flex items-center">
+                    <div className="w-2 h-2 bg-white rounded-full mr-2 animate-pulse"></div>
+                    LIVE NOW
+                  </div>
+                ) : match.status === "scheduled" ? (
+                  "UPCOMING"
+                ) : (
+                  "FINISHED"
+                )}
+              </Badge>
+            </div>
+            <Button 
+              variant="outline" 
+              onClick={onClose} 
+              className="text-gold-400 hover:text-white hover:bg-gold-400/20 border-gold-400/50"
+            >
+              ✕
+            </Button>
+          </div>
+
+          <div className="mb-8">
+            <div className="text-center space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex-1">
+                  <h3 className="text-xl font-bold text-white bg-gradient-to-r from-transparent via-gold-400/10 to-transparent py-2">
+                    {match.homeTeam}
+                  </h3>
+                </div>
+                <div className="px-6 flex flex-col items-center">
+                  <div className="relative">
+                    <span className="text-6xl font-bold text-gold-400 mb-2">
+                      {match.status !== "scheduled" ? `${match.homeScore}-${match.awayScore}` : "VS"}
+                    </span>
+                    {match.status === "live" && (
+                      <>
+                        <div className="text-xs text-red-400 animate-pulse mt-2">LIVE</div>
+                        {match.bigChance && (
+                          <div className="mt-2 text-sm">
+                            <div className="bg-yellow-500 text-black px-2 py-1 rounded animate-pulse font-bold">
+                              BIG CHANCE
+                            </div>
+                            <div className="text-xs mt-1 text-yellow-400">
+                              {match.bigChance.team === "home" ? match.homeTeam : match.awayTeam}
+                            </div>
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-xl font-bold text-white bg-gradient-to-r from-transparent via-gold-400/10 to-transparent py-2">
+                    {match.awayTeam}
+                  </h3>
+                </div>
+              </div>
+              <div className="text-sm text-gold-400/80 space-y-1">
+                {match.venue && (
+                  <div className="flex items-center justify-center gap-1">
+                    <MapPin className="h-4 w-4" />
+                    {match.venue}
+                  </div>
+                )}
+                <div className="flex items-center justify-center gap-1">
+                  <Calendar className="h-4 w-4" />
+                  {match.matchDate} {match.matchTime && (
+                    <>
+                      <Clock className="h-4 w-4 ml-2" />
+                      {match.matchTime}
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {match.events && match.events.length > 0 ? (
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-gold-400 mb-4 border-b border-gold-400/30 pb-2">Match Events</h3>
+              <div className="space-y-2">
+                {match.events.map((event, index) => (
+                  <div 
+                    key={index} 
+                    className="flex items-center text-sm p-3 hover:bg-gold-400/5 rounded-lg border border-gold-400/10 transition-colors"
+                  >
+                    <span className="w-12 text-gold-400 font-semibold">{event.minute}'</span>
+                    <span className="w-8 text-xl">{getEventIcon(event.type)}</span>
+                    <div className="flex-1">
+                      <span className="text-white font-medium">{event.player}</span>
+                      {event.additionalInfo?.assistedBy && (
+                        <span className="text-gold-400/80"> (assist: {event.additionalInfo.assistedBy})</span>
+                      )}
+                      {event.description && (
+                        <div className="text-gold-400/60 text-xs mt-1">{event.description}</div>
+                      )}
+                    </div>
+                    <span className="text-xs text-gold-400/80 font-medium">
+                      {event.team === 'home' ? match.homeTeam : match.awayTeam}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="text-center text-gold-400/60 py-8">No events recorded yet.</div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function MatchesPage() {
+  const [matches, setMatches] = useState<Match[]>([])
+  const [loading, setLoading] = useState(true)
+  const [updating, setUpdating] = useState(false)
+  const [error, setError] = useState("")
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedState, setSelectedState] = useState("all")
   const [selectedDate, setSelectedDate] = useState("all")
+  const [selectedMatch, setSelectedMatch] = useState<Match | null>(null)
 
-  const matches = [
-    {
-      id: 1,
-      homeTeam: "Lagos United",
-      awayTeam: "Kano Pillars",
-      homeScore: 2,
-      awayScore: 1,
-      state: "Lagos",
-      date: "2024-01-15",
-      time: "16:00",
-      status: "finished",
-      venue: "Teslim Balogun Stadium",
-      attendance: 24000,
-      referee: "John Adebayo",
-      events: [
-        { type: "goal", player: "Ahmed Musa", team: "home", minute: 23 },
-        { type: "goal", player: "Ibrahim Yusuf", team: "away", minute: 45 },
-        { type: "goal", player: "Chukwu Emeka", team: "home", minute: 78 },
-      ],
-    },
-    {
-      id: 2,
-      homeTeam: "Rivers United",
-      awayTeam: "Plateau United",
-      homeScore: 1,
-      awayScore: 1,
-      state: "Rivers",
-      date: "2024-01-15",
-      time: "18:00",
-      status: "live",
-      venue: "Adokiye Amiesimaka Stadium",
-      minute: 67,
-      attendance: 18500,
-      referee: "Mary Okafor",
-    },
-    {
-      id: 3,
-      homeTeam: "Enyimba FC",
-      awayTeam: "Heartland FC",
-      state: "Abia",
-      date: "2024-01-16",
-      time: "16:00",
-      status: "upcoming",
-      venue: "Enyimba International Stadium",
-      referee: "David Okonkwo",
-      ticketPrice: "₦2,000 - ₦10,000",
-    },
-    {
-      id: 4,
-      homeTeam: "Shooting Stars",
-      awayTeam: "3SC Ibadan",
-      homeScore: 0,
-      awayScore: 2,
-      state: "Oyo",
-      date: "2024-01-14",
-      time: "15:30",
-      status: "finished",
-      venue: "Lekan Salami Stadium",
-      attendance: 15000,
-      referee: "Samuel Adeyemi",
-    },
-  ]
+  // Function to fetch matches
+  const fetchMatches = async (isPolling = false) => {
+    if (isPolling) {
+      setUpdating(true)
+    }
+    try {
+      const response = await axios.get("http://localhost:5000/api/matches")
+      const newMatches = response.data as Match[]
 
-  const liveMatches = matches.filter((match) => match.status === "live")
-  const upcomingMatches = matches.filter((match) => match.status === "upcoming")
-  const finishedMatches = matches.filter((match) => match.status === "finished")
+      // Compare scores and add big chance if there's a potential update
+      const updatedMatches: Match[] = newMatches.map((newMatch: Match) => {
+        const oldMatch = matches.find(m => m._id === newMatch._id)
+        if (oldMatch && newMatch.status === "live") {
+          // Check if there's a score change coming
+          const scoreChange = newMatch.homeScore !== oldMatch.homeScore || 
+                            newMatch.awayScore !== oldMatch.awayScore
+
+          if (scoreChange) {
+            // Keep the old score but add big chance
+            return {
+              ...oldMatch,
+              bigChance: {
+                team: newMatch.homeScore !== oldMatch.homeScore ? "home" as const : "away" as const,
+                description: "Potential goal!",
+                timestamp: Date.now()
+              }
+            } as Match
+          }
+        }
+        return newMatch
+      })
+
+      // First update with big chance indicator
+      setMatches(updatedMatches)
+      setError("")
+
+      // After 3 seconds, update the actual scores
+      setTimeout(() => {
+        setMatches(prev => 
+          prev.map(match => {
+            const newMatch = newMatches.find(m => m._id === match._id)
+            if (newMatch && match.bigChance) {
+              // Update the score and remove big chance
+              return {
+                ...newMatch,
+                bigChance: undefined
+              }
+            }
+            return match
+          })
+        )
+      }, 5000)
+    } catch (err) {
+      setError("Failed to load matches")
+      console.error("Error fetching matches:", err)
+    } finally {
+      setLoading(false)
+      if (isPolling) {
+        setUpdating(false)
+      }
+    }
+  }
+
+  // Initial fetch
+  useEffect(() => {
+    fetchMatches()
+  }, [])
+
+  // Polling for live matches with dynamic intervals
+  useEffect(() => {
+    // Only start polling if we have any live matches
+    const hasLiveMatches = matches.some(match => match.status === "live")
+    
+    if (hasLiveMatches) {
+      // Update more frequently (every 10 seconds) for live matches
+      const fastPollInterval = setInterval(() => {
+        fetchMatches(true)
+      }, 10000)
+
+      let ws: WebSocket | null = null;
+
+      try {
+        // Try to set up WebSocket connection, but don't fail if it's not available
+        ws = new WebSocket('ws://localhost:5000/ws/matches');
+        
+        ws.onopen = () => {
+          console.log('WebSocket Connected');
+        };
+
+        ws.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data) as {
+              type: string;
+              matchId: string;
+              team: "home" | "away";
+              update?: Partial<Match>;
+            };
+            
+            if (data.type === 'score_update') {
+              // Immediately show big chance
+              setMatches(prev => prev.map(match => {
+                if (match._id === data.matchId) {
+                  return {
+                    ...match,
+                    bigChance: {
+                      team: data.team,
+                      description: "Potential goal!",
+                      timestamp: Date.now()
+                    }
+                  };
+                }
+                return match;
+              }));
+
+              // Update score after 3 seconds
+              setTimeout(() => {
+                setMatches(prev => prev.map(match => {
+                  if (match._id === data.matchId) {
+                    return {
+                      ...match,
+                      ...data.update,
+                      bigChance: undefined
+                    };
+                  }
+                  return match;
+                }));
+              }, 3000);
+            }
+          } catch (err) {
+            console.log('Error processing WebSocket message:', err);
+          }
+        };
+
+        ws.onerror = () => {
+          console.log('WebSocket connection failed, falling back to polling');
+          ws = null;
+        };
+
+        ws.onclose = () => {
+          console.log('WebSocket connection closed');
+          ws = null;
+        };
+      } catch (err) {
+        console.log('WebSocket setup failed, using polling instead');
+      }
+
+      // Cleanup function
+      return () => {
+        clearInterval(fastPollInterval);
+        if (ws) {
+          ws.close();
+        }
+      };
+    }
+  }, [matches])
+
+  // If loading, show loading state
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-gray-900"></div>
+      </div>
+    )
+  }
+
+  // If error, show error state
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-red-500 text-xl">{error}</div>
+      </div>
+    )
+  }
+
+  // Filter matches based on their status
+  const filteredMatches = matches.filter((match) => {
+    const matchesSearch =
+      match.homeTeam.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      match.awayTeam.toLowerCase().includes(searchTerm.toLowerCase())
+
+    // Filter by status
+    const matchesStatus = selectedState === "all" || match.status === selectedState
+
+    // Filter by date
+    const matchesDate = selectedDate === "all" || match.matchDate === selectedDate
+
+    return matchesSearch && matchesStatus && matchesDate
+  })
+
+  const liveMatches = filteredMatches.filter((match) => match.status === "live")
+  const upcomingMatches = filteredMatches.filter((match) => match.status === "scheduled")
+  const finishedMatches = filteredMatches.filter((match) => match.status === "finished")
 
   const nigerianStates = [
     "Abia",
@@ -123,16 +441,18 @@ export default function MatchesPage() {
     "Zamfara",
   ]
 
-  const MatchCard = ({ match }: { match: any }) => (
-    <Card className="card-black-gold hover:scale-105 transition-all duration-300 group">
+  const MatchCard = ({ match }: { match: Match }) => (
+    <Card 
+      className="card-black-gold hover:scale-105 transition-all duration-300 group cursor-pointer"
+      onClick={() => setSelectedMatch(match)}>
       <CardHeader>
         <div className="flex items-center justify-between">
           <Badge
-            variant={match.status === "live" ? "destructive" : match.status === "upcoming" ? "secondary" : "outline"}
+            variant={match.status === "live" ? "destructive" : match.status === "scheduled" ? "secondary" : "outline"}
             className={`${match.status === "live" ? "animate-pulse-gold" : ""} ${
               match.status === "live"
                 ? "bg-red-500 text-white"
-                : match.status === "upcoming"
+                : match.status === "scheduled"
                   ? "bg-gold-400 text-black-900"
                   : "bg-green-600 text-white"
             }`}
@@ -140,18 +460,20 @@ export default function MatchesPage() {
             {match.status === "live" ? (
               <div className="flex items-center">
                 <div className="live-indicator w-2 h-2 mr-2"></div>
-                LIVE {match.minute}'
+                LIVE
               </div>
-            ) : match.status === "upcoming" ? (
+            ) : match.status === "scheduled" ? (
               "UPCOMING"
             ) : (
               "FINISHED"
             )}
           </Badge>
-          <div className="flex items-center text-sm text-gold-400">
-            <MapPin className="h-4 w-4 mr-1" />
-            {match.state}
-          </div>
+          {match.venue && (
+            <div className="flex items-center text-sm text-gold-400">
+              <MapPin className="h-4 w-4 mr-1" />
+              {match.venue}
+            </div>
+          )}
         </div>
       </CardHeader>
       <CardContent>
@@ -166,11 +488,23 @@ export default function MatchesPage() {
             </div>
             <div className="text-center mx-6">
               <div className="text-5xl font-bold text-gold-400 mb-2">
-                {match.status === "finished" || match.status === "live"
-                  ? `${match.homeScore}-${match.awayScore}`
-                  : "VS"}
+                {match.status !== "scheduled" ? `${match.homeScore}-${match.awayScore}` : "VS"}
               </div>
-              {match.status === "live" && <div className="text-xs text-red-400 animate-pulse">LIVE</div>}
+              {match.status === "live" && (
+                <>
+                  <div className="text-xs text-red-400 animate-pulse">LIVE</div>
+                  {match.bigChance && (
+                    <div className="mt-2 text-sm">
+                      <div className="bg-yellow-500 text-black px-2 py-1 rounded animate-pulse font-bold">
+                        BIG CHANCE
+                      </div>
+                      <div className="text-xs mt-1 text-yellow-400">
+                        {match.bigChance.team === "home" ? match.homeTeam : match.awayTeam}
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
             </div>
             <div className="text-center flex-1">
               <div className="w-16 h-16 mx-auto mb-3 bg-gradient-gold rounded-full flex items-center justify-center">
@@ -185,23 +519,20 @@ export default function MatchesPage() {
         <div className="space-y-3 text-sm text-gray-400 mb-6">
           <div className="flex items-center justify-center">
             <Calendar className="h-4 w-4 mr-2 text-gold-400" />
-            {match.date}
-            <Clock className="h-4 w-4 ml-4 mr-2 text-gold-400" />
-            {match.time}
+            {match.matchDate}
+            {match.matchTime && (
+              <>
+                <Clock className="h-4 w-4 ml-4 mr-2 text-gold-400" />
+                {match.matchTime}
+              </>
+            )}
           </div>
-          <div className="text-center font-medium text-gold-400">{match.venue}</div>
-          {match.attendance && (
-            <div className="flex items-center justify-center text-xs">
-              <Users className="h-3 w-3 mr-1" />
-              {match.attendance.toLocaleString()} attendance
-            </div>
-          )}
-          {match.ticketPrice && <div className="text-center text-xs text-gold-400">Tickets: {match.ticketPrice}</div>}
+          {match.venue && <div className="text-center font-medium text-gold-400">{match.venue}</div>}
         </div>
 
         <div className="flex gap-2">
           <Button className="flex-1 btn-gold">
-            {match.status === "live" ? "Watch Live" : match.status === "upcoming" ? "Get Tickets" : "Match Report"}
+            {match.status === "live" ? "Watch Live" : match.status === "scheduled" ? "Get Tickets" : "Match Report"}
           </Button>
           <Button variant="outline" size="icon" className="btn-black bg-transparent">
             <Eye className="h-4 w-4" />
@@ -243,17 +574,21 @@ export default function MatchesPage() {
                 </div>
                 <Select value={selectedState} onValueChange={setSelectedState}>
                   <SelectTrigger className="w-full lg:w-48 bg-black-800 border-gold-400/30 text-white">
-                    <SelectValue placeholder="Select State" />
+                    <SelectValue placeholder="Select Status" />
                   </SelectTrigger>
                   <SelectContent className="bg-black-800 border-gold-400/20">
                     <SelectItem value="all" className="text-gold-400">
-                      All States
+                      All Statuses
                     </SelectItem>
-                    {nigerianStates.map((state) => (
-                      <SelectItem key={state} value={state.toLowerCase()} className="text-gold-400">
-                        {state}
-                      </SelectItem>
-                    ))}
+                    <SelectItem value="live" className="text-gold-400">
+                      Live
+                    </SelectItem>
+                    <SelectItem value="scheduled" className="text-gold-400">
+                      Upcoming
+                    </SelectItem>
+                    <SelectItem value="finished" className="text-gold-400">
+                      Finished
+                    </SelectItem>
                   </SelectContent>
                 </Select>
                 <Select value={selectedDate} onValueChange={setSelectedDate}>
@@ -285,10 +620,18 @@ export default function MatchesPage() {
         </div>
 
         {/* Match Tabs */}
+        {updating && (
+          <div className="text-center mb-4">
+            <span className="inline-flex items-center text-sm text-gold-400">
+              <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-gold-400 mr-2"></div>
+              Updating live scores...
+            </span>
+          </div>
+        )}
         <Tabs defaultValue="all" className="space-y-8">
           <TabsList className="grid w-full grid-cols-4 bg-black-800 border border-gold-400/20">
             <TabsTrigger value="all" className="data-[state=active]:bg-gold-400 data-[state=active]:text-black-900">
-              All Matches ({matches.length})
+              All Matches ({filteredMatches.length})
             </TabsTrigger>
             <TabsTrigger value="live" className="data-[state=active]:bg-gold-400 data-[state=active]:text-black-900">
               Live ({liveMatches.length})
@@ -309,8 +652,8 @@ export default function MatchesPage() {
 
           <TabsContent value="all">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {matches.map((match) => (
-                <MatchCard key={match.id} match={match} />
+              {filteredMatches.map((match) => (
+                <MatchCard key={match._id} match={match} />
               ))}
             </div>
           </TabsContent>
@@ -319,7 +662,7 @@ export default function MatchesPage() {
             {liveMatches.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                 {liveMatches.map((match) => (
-                  <MatchCard key={match.id} match={match} />
+                  <MatchCard key={match._id} match={match} />
                 ))}
               </div>
             ) : (
@@ -336,7 +679,7 @@ export default function MatchesPage() {
           <TabsContent value="upcoming">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {upcomingMatches.map((match) => (
-                <MatchCard key={match.id} match={match} />
+                <MatchCard key={match._id} match={match} />
               ))}
             </div>
           </TabsContent>
@@ -344,7 +687,7 @@ export default function MatchesPage() {
           <TabsContent value="finished">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {finishedMatches.map((match) => (
-                <MatchCard key={match.id} match={match} />
+                <MatchCard key={match._id} match={match} />
               ))}
             </div>
           </TabsContent>
@@ -359,6 +702,13 @@ export default function MatchesPage() {
       </div>
 
       <Footer />
+      
+      {selectedMatch && (
+        <MatchDetailsModal 
+          match={selectedMatch} 
+          onClose={() => setSelectedMatch(null)} 
+        />
+      )}
     </div>
   )
 }

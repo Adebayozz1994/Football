@@ -1,28 +1,24 @@
-// const express = require('express');
-// const matchController = require('../controllers/matchController');
-// const { optionalAuth, authenticateToken } = require('../middlewares/auth');
+const express = require('express');
+const router = express.Router();
+const matchController = require('../controllers/matchController');
+const { authenticateToken } = require('../middlewares/adminAuth');
 
-// const router = express.Router();
+// Public routes
+router.get('/', matchController.getAllMatches); 
+router.get('/:id', matchController.getMatchById);
 
-// // Public routes
-// router.get('/', optionalAuth, matchController.getMatches);
-// router.get('/upcoming', optionalAuth, matchController.getUpcomingMatches);
-// router.get('/live', optionalAuth, matchController.getLiveMatches);
-// router.get('/results', optionalAuth, matchController.getMatchResults);
-// router.get('/by-state/:state', optionalAuth, matchController.getMatchesByState);
-// router.get('/by-team/:teamId', optionalAuth, matchController.getMatchesByTeam);
-// router.get('/:id', optionalAuth, matchController.getMatchById);
-// router.get('/:id/events', optionalAuth, matchController.getMatchEvents);
-// router.get('/:id/lineups', optionalAuth, matchController.getMatchLineups);
-// router.get('/:id/stats', optionalAuth, matchController.getMatchStats);
+// Protected routes (admin only)
+router.post('/', authenticateToken, matchController.createMatch);
+router.put('/:id', authenticateToken, matchController.updateMatch);
+router.patch('/:id/score', authenticateToken, matchController.updateScore);
 
-// // Search and filter
-// router.get('/search/:query', optionalAuth, matchController.searchMatches);
-// router.get('/filter/date-range', optionalAuth, matchController.getMatchesByDateRange);
+router.post('/:id/events', authenticateToken, matchController.addEvent);
+router.delete('/:id/events/:eventIndex', authenticateToken, matchController.deleteEvent);
 
-// // Protected routes (for notifications, favorites, etc.)
-// router.use(authenticateToken);
-// router.post('/:id/follow', matchController.followMatch);
-// router.delete('/:id/follow', matchController.unfollowMatch);
+router.patch('/:id/finish', authenticateToken, matchController.markFinished);
+router.patch('/:id/schedule', authenticateToken, matchController.markScheduled);
+router.patch('/:id/live', authenticateToken, matchController.markLive);
 
-// module.exports = router;
+router.delete('/:id', authenticateToken, matchController.deleteMatch);
+
+module.exports = router;

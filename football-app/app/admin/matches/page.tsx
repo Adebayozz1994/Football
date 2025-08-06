@@ -1,417 +1,524 @@
-"use client"
+'use client'
 
-import { useState } from "react"
-import { Card, CardContent, CardHeader } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import {
-  Search,
-  Filter,
-  Plus,
-  Edit,
-  Trash2,
-  Eye,
-  Calendar,
-  MapPin,
-  Clock,
-  MoreHorizontal,
-  Trophy,
-  Users,
-  Activity,
-} from "lucide-react"
-import Link from "next/link"
+import axios from 'axios'
+import { useState, useEffect } from 'react'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Badge } from '@/components/ui/badge'
+import { Separator } from '@/components/ui/separator'
+type Match = {
+  _id: string
+  homeTeam: string
+  awayTeam: string
+  homeScore: number
+  awayScore: number
+  status: string
+  matchDate: string
+  matchTime?: string
+  venue?: string
+  events?: {
+    minute: number
+    type: string
+    team: string
+    player?: string
+    description?: string
+  }[]
+}
 
-export default function AdminMatchesPage() {
-  const [searchTerm, setSearchTerm] = useState("")
-  const [selectedStatus, setSelectedStatus] = useState("all")
-  const [selectedState, setSelectedState] = useState("all")
+const API = "http://localhost:5000/api/matches"
 
-  const matches = [
-    {
-      id: 1,
-      homeTeam: "Lagos United",
-      awayTeam: "Kano Pillars",
-      homeScore: 2,
-      awayScore: 1,
-      state: "Lagos",
-      date: "2024-01-15",
-      time: "16:00",
-      status: "finished",
-      venue: "Teslim Balogun Stadium",
-      attendance: 24000,
-      referee: "John Adebayo",
-      createdBy: "Admin User",
-      lastUpdated: "2024-01-15 18:30",
-    },
-    {
-      id: 2,
-      homeTeam: "Rivers United",
-      awayTeam: "Plateau United",
-      homeScore: 1,
-      awayScore: 1,
-      state: "Rivers",
-      date: "2024-01-15",
-      time: "18:00",
-      status: "live",
-      venue: "Adokiye Amiesimaka Stadium",
-      minute: 67,
-      attendance: 18500,
-      referee: "Mary Okafor",
-      createdBy: "Match Admin",
-      lastUpdated: "2024-01-15 19:07",
-    },
-    {
-      id: 3,
-      homeTeam: "Enyimba FC",
-      awayTeam: "Heartland FC",
-      state: "Abia",
-      date: "2024-01-16",
-      time: "16:00",
-      status: "upcoming",
-      venue: "Enyimba International Stadium",
-      referee: "David Okonkwo",
-      createdBy: "Admin User",
-      lastUpdated: "2024-01-14 10:15",
-    },
-  ]
+// Helper to get token from localStorage
+const getToken = () => {
+  if (typeof window !== "undefined") {
+    return localStorage.getItem("admin_token")
+  }
+  return null
+}
 
-  const nigerianStates = [
-    "Abia",
-    "Adamawa",
-    "Akwa Ibom",
-    "Anambra",
-    "Bauchi",
-    "Bayelsa",
-    "Benue",
-    "Borno",
-    "Cross River",
-    "Delta",
-    "Ebonyi",
-    "Edo",
-    "Ekiti",
-    "Enugu",
-    "FCT",
-    "Gombe",
-    "Imo",
-    "Jigawa",
-    "Kaduna",
-    "Kano",
-    "Katsina",
-    "Kebbi",
-    "Kogi",
-    "Kwara",
-    "Lagos",
-    "Nasarawa",
-    "Niger",
-    "Ogun",
-    "Ondo",
-    "Osun",
-    "Oyo",
-    "Plateau",
-    "Rivers",
-    "Sokoto",
-    "Taraba",
-    "Yobe",
-    "Zamfara",
-  ]
+export default function MatchesPage() {
+  const [matches, setMatches] = useState<Match[]>([])
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState("")
+  const [form, setForm] = useState({
+    homeTeam: "",
+    awayTeam: "",
+    matchDate: "",
+    matchTime: "",
+    venue: ""
+  })
+  const [selectedMatch, setSelectedMatch] = useState<Match | null>(null)
+  const [eventForm, setEventForm] = useState({
+    minute: "",
+    type: "",
+    team: "",
+    player: "",
+    description: ""
+  })
 
-  const liveMatches = matches.filter((match) => match.status === "live")
-  const upcomingMatches = matches.filter((match) => match.status === "upcoming")
-  const finishedMatches = matches.filter((match) => match.status === "finished")
+  // Fetch all matches
+  const fetchMatches = async () => {
+    setLoading(true)
+    try {
+      const res = await axios.get(API)
+      setMatches(res.data)
+    } catch (err: any) {
+      setError(err.response?.data?.message || "Error fetching matches")
+    }
+    setLoading(false)
+  }
 
-  const MatchCard = ({ match }: { match: any }) => (
-    <Card className="card-black-gold">
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <Badge
-            variant={match.status === "live" ? "destructive" : match.status === "upcoming" ? "secondary" : "outline"}
-            className={
-              match.status === "live"
-                ? "animate-pulse-gold bg-red-500 text-white"
-                : match.status === "upcoming"
-                  ? "bg-gold-400 text-black-900"
-                  : "bg-green-600 text-white"
-            }
-          >
-            {match.status === "live" ? (
-              <div className="flex items-center">
-                <div className="live-indicator w-2 h-2 mr-2"></div>
-                LIVE {match.minute}'
-              </div>
-            ) : match.status === "upcoming" ? (
-              "UPCOMING"
-            ) : (
-              "FINISHED"
-            )}
-          </Badge>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="hover:bg-gold-400/10">
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="bg-black-800 border-gold-400/20">
-              <DropdownMenuItem asChild className="hover:bg-gold-400/10">
-                <Link href={`/admin/matches/${match.id}`} className="flex items-center text-gold-400">
-                  <Eye className="h-4 w-4 mr-2" />
-                  View Details
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild className="hover:bg-gold-400/10">
-                <Link href={`/admin/matches/${match.id}/edit`} className="flex items-center text-gold-400">
-                  <Edit className="h-4 w-4 mr-2" />
-                  Edit Match
-                </Link>
-              </DropdownMenuItem>
-              {match.status === "live" && (
-                <DropdownMenuItem asChild className="hover:bg-gold-400/10">
-                  <Link href={`/admin/matches/${match.id}/live`} className="flex items-center text-gold-400">
-                    <Activity className="h-4 w-4 mr-2" />
-                    Live Updates
-                  </Link>
-                </DropdownMenuItem>
-              )}
-              <DropdownMenuItem className="hover:bg-red-500/10 text-red-400">
-                <Trash2 className="h-4 w-4 mr-2" />
-                Delete Match
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      </CardHeader>
-      <CardContent>
-        <div className="text-center mb-6">
-          <div className="flex items-center justify-between mb-4">
-            <div className="text-center flex-1">
-              <div className="w-12 h-12 mx-auto mb-2 bg-gradient-gold rounded-full flex items-center justify-center">
-                <Trophy className="h-6 w-6 text-black-900" />
-              </div>
-              <div className="font-semibold text-white text-sm">{match.homeTeam}</div>
-              <div className="text-xs text-gray-400">HOME</div>
-            </div>
-            <div className="text-center mx-4">
-              <div className="text-3xl font-bold text-gold-400 mb-1">
-                {match.status === "finished" || match.status === "live"
-                  ? `${match.homeScore}-${match.awayScore}`
-                  : "VS"}
-              </div>
-              {match.status === "live" && <div className="text-xs text-red-400 animate-pulse">LIVE</div>}
-            </div>
-            <div className="text-center flex-1">
-              <div className="w-12 h-12 mx-auto mb-2 bg-gradient-gold rounded-full flex items-center justify-center">
-                <Trophy className="h-6 w-6 text-black-900" />
-              </div>
-              <div className="font-semibold text-white text-sm">{match.awayTeam}</div>
-              <div className="text-xs text-gray-400">AWAY</div>
-            </div>
-          </div>
-        </div>
+  useEffect(() => {
+    fetchMatches()
+  }, []);
 
-        <div className="space-y-2 text-xs text-gray-400 mb-4">
-          <div className="flex items-center justify-center">
-            <Calendar className="h-3 w-3 mr-1" />
-            {match.date} at {match.time}
-          </div>
-          <div className="flex items-center justify-center">
-            <MapPin className="h-3 w-3 mr-1" />
-            {match.venue}, {match.state}
-          </div>
-          <div className="text-center">Referee: {match.referee}</div>
-          {match.attendance && (
-            <div className="flex items-center justify-center">
-              <Users className="h-3 w-3 mr-1" />
-              {match.attendance.toLocaleString()} attendance
-            </div>
-          )}
-        </div>
+  // Create a match
+  const handleCreate = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError("")
+    try {
+      const token = getToken()
+      if (!token) {
+        setError("Admin token is required")
+        return
+      }
+      await axios.post(API, form, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      })
+      setForm({ homeTeam: "", awayTeam: "", matchDate: "", matchTime: "", venue: "" })
+      fetchMatches()
+    } catch (err: any) {
+      setError(err.response?.data?.message || "Error creating match")
+    }
+  }
 
-        <div className="text-xs text-gray-500 border-t border-gold-400/20 pt-3">
-          <div>Created by: {match.createdBy}</div>
-          <div>Last updated: {match.lastUpdated}</div>
-        </div>
-      </CardContent>
-    </Card>
-  )
+  // Select a match to view/edit
+  const selectMatch = async (id: string) => {
+    setError("")
+    setSelectedMatch(null)
+    try {
+      const res = await axios.get(`${API}/${id}`)
+      setSelectedMatch(res.data)
+    } catch (err: any) {
+      setError(err.response?.data?.message || "Error fetching match")
+    }
+  }
+
+  // Update score
+  const handleScoreUpdate = async (id: string, homeScore: number, awayScore: number) => {
+    setError("")
+    try {
+      const token = getToken()
+      if (!token) {
+        setError("Admin token is required")
+        return
+      }
+
+      // Validate scores
+      if (isNaN(homeScore) || isNaN(awayScore)) {
+        setError("Please enter valid scores")
+        return
+      }
+
+      if (homeScore < 0 || awayScore < 0) {
+        setError("Scores cannot be negative")
+        return
+      }
+
+      if (!Number.isInteger(homeScore) || !Number.isInteger(awayScore)) {
+        setError("Scores must be whole numbers")
+        return
+      }
+
+      await axios.patch(`${API}/${id}/score`, 
+        { homeScore, awayScore },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
+          },
+          timeout: 5000, // 5 second timeout
+          validateStatus: function (status) {
+            return status >= 200 && status < 500; // Handle only 5xx errors as errors
+          }
+        }
+      )
+      
+      // Refresh match data after successful update
+      await selectMatch(id)
+      await fetchMatches()
+    } catch (err: any) {
+      console.error("Score update error:", err)
+      setError(err.response?.data?.message || "Error updating score")
+    }
+  }
+
+  // Mark as live/scheduled/finished
+  const handleStatus = async (id: string, status: "live" | "scheduled" | "finished") => {
+    setError("")
+    try {
+      const token = getToken()
+      if (!token) {
+        setError("Admin token is required")
+        return
+      }
+      
+      // Match the backend route endpoints exactly
+      const endpoint = status === "live" ? "live" : 
+                      status === "scheduled" ? "schedule" : 
+                      "finish";
+      
+      await axios.patch(`${API}/${id}/${endpoint}`, {}, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      })
+      selectMatch(id)
+      fetchMatches()
+    } catch (err: any) {
+      console.error("Status update error:", err)
+      setError(err.response?.data?.message || `Error marking as ${status}`)
+    }
+  }
+
+  // Add event
+  const handleAddEvent = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!selectedMatch) return
+    setError("")
+    try {
+      const token = getToken()
+      if (!token) {
+        setError("Admin token is required")
+        return
+      }
+      const body = {
+        minute: Number(eventForm.minute),
+        type: eventForm.type,
+        team: eventForm.team,
+        player: eventForm.player,
+        description: eventForm.description
+      }
+      await axios.post(`${API}/${selectedMatch._id}/events`, body, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      })
+      selectMatch(selectedMatch._id)
+      setEventForm({ minute: "", type: "", team: "", player: "", description: "" })
+    } catch (err: any) {
+      setError(err.response?.data?.message || "Error adding event")
+    }
+  }
+
+  // Delete event
+  const handleDeleteEvent = async (index: number) => {
+    if (!selectedMatch) return
+    setError("")
+    try {
+      const token = getToken()
+      if (!token) {
+        setError("Admin token is required")
+        return
+      }
+      await axios.delete(`${API}/${selectedMatch._id}/events/${index}`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      })
+      selectMatch(selectedMatch._id)
+    } catch (err: any) {
+      setError(err.response?.data?.message || "Error deleting event")
+    }
+  }
+
+  // Delete match
+  const handleDeleteMatch = async (id: string) => {
+    setError("")
+    try {
+      const token = getToken()
+      if (!token) {
+        setError("Admin token is required")
+        return
+      }
+      await axios.delete(`${API}/${id}`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      })
+      fetchMatches()
+      setSelectedMatch(null)
+    } catch (err: any) {
+      setError(err.response?.data?.message || "Error deleting match")
+    }
+  }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-white">Match Management</h1>
-          <p className="text-gray-400">Manage all football matches across Nigerian states</p>
-        </div>
-        <Button className="btn-gold" asChild>
-          <Link href="/admin/matches/create">
-            <Plus className="h-4 w-4 mr-2" />
-            Create Match
-          </Link>
-        </Button>
+    <div className="container max-w-5xl py-6 space-y-6">
+      <div className="flex justify-between items-center">
+        <h1 className="text-3xl font-bold">Match Management</h1>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <Card className="card-black-gold">
-          <CardContent className="p-6">
-            <div className="flex items-center">
-              <div className="p-2 bg-red-500/20 rounded-lg">
-                <Activity className="h-6 w-6 text-red-400" />
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-400">Live Matches</p>
-                <p className="text-2xl font-bold text-white">{liveMatches.length}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="card-black-gold">
-          <CardContent className="p-6">
-            <div className="flex items-center">
-              <div className="p-2 bg-gold-400/20 rounded-lg">
-                <Clock className="h-6 w-6 text-gold-400" />
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-400">Upcoming</p>
-                <p className="text-2xl font-bold text-white">{upcomingMatches.length}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="card-black-gold">
-          <CardContent className="p-6">
-            <div className="flex items-center">
-              <div className="p-2 bg-green-500/20 rounded-lg">
-                <Trophy className="h-6 w-6 text-green-400" />
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-400">Finished</p>
-                <p className="text-2xl font-bold text-white">{finishedMatches.length}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="card-black-gold">
-          <CardContent className="p-6">
-            <div className="flex items-center">
-              <div className="p-2 bg-blue-500/20 rounded-lg">
-                <Users className="h-6 w-6 text-blue-400" />
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-400">Total Matches</p>
-                <p className="text-2xl font-bold text-white">{matches.length}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Filters */}
-      <Card className="card-black-gold">
-        <CardContent className="p-6">
-          <div className="flex flex-col lg:flex-row gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gold-400" />
+      <Card>
+        <CardHeader>
+          <CardTitle>Create Match</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleCreate} className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
               <Input
-                placeholder="Search matches, teams, or venues..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 bg-black-800 border-gold-400/30 text-white placeholder:text-gray-400 focus:border-gold-400"
+                placeholder="Home Team"
+                value={form.homeTeam}
+                onChange={e => setForm({ ...form, homeTeam: e.target.value })}
+                required
+              />
+              <Input
+                placeholder="Away Team"
+                value={form.awayTeam}
+                onChange={e => setForm({ ...form, awayTeam: e.target.value })}
+                required
+              />
+              <Input
+                type="date"
+                value={form.matchDate}
+                onChange={e => setForm({ ...form, matchDate: e.target.value })}
+                required
+              />
+              <Input
+                type="time"
+                value={form.matchTime}
+                onChange={e => setForm({ ...form, matchTime: e.target.value })}
+              />
+              <Input
+                className="col-span-2"
+                placeholder="Venue"
+                value={form.venue}
+                onChange={e => setForm({ ...form, venue: e.target.value })}
               />
             </div>
-            <Select value={selectedStatus} onValueChange={setSelectedStatus}>
-              <SelectTrigger className="w-full lg:w-48 bg-black-800 border-gold-400/30 text-white">
-                <SelectValue placeholder="Match Status" />
-              </SelectTrigger>
-              <SelectContent className="bg-black-800 border-gold-400/20">
-                <SelectItem value="all" className="text-gold-400">
-                  All Status
-                </SelectItem>
-                <SelectItem value="live" className="text-gold-400">
-                  Live
-                </SelectItem>
-                <SelectItem value="upcoming" className="text-gold-400">
-                  Upcoming
-                </SelectItem>
-                <SelectItem value="finished" className="text-gold-400">
-                  Finished
-                </SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={selectedState} onValueChange={setSelectedState}>
-              <SelectTrigger className="w-full lg:w-48 bg-black-800 border-gold-400/30 text-white">
-                <SelectValue placeholder="Select State" />
-              </SelectTrigger>
-              <SelectContent className="bg-black-800 border-gold-400/20">
-                <SelectItem value="all" className="text-gold-400">
-                  All States
-                </SelectItem>
-                {nigerianStates.map((state) => (
-                  <SelectItem key={state} value={state.toLowerCase()} className="text-gold-400">
-                    {state}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Button className="btn-gold">
-              <Filter className="h-4 w-4 mr-2" />
-              Filter
-            </Button>
-          </div>
+            <Button type="submit" className="w-full md:w-auto">Create Match</Button>
+          </form>
         </CardContent>
       </Card>
 
-      {/* Match Tabs */}
-      <Tabs defaultValue="all" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4 bg-black-800 border border-gold-400/20">
-          <TabsTrigger value="all" className="data-[state=active]:bg-gold-400 data-[state=active]:text-black-900">
-            All Matches ({matches.length})
-          </TabsTrigger>
-          <TabsTrigger value="live" className="data-[state=active]:bg-gold-400 data-[state=active]:text-black-900">
-            Live ({liveMatches.length})
-          </TabsTrigger>
-          <TabsTrigger value="upcoming" className="data-[state=active]:bg-gold-400 data-[state=active]:text-black-900">
-            Upcoming ({upcomingMatches.length})
-          </TabsTrigger>
-          <TabsTrigger value="finished" className="data-[state=active]:bg-gold-400 data-[state=active]:text-black-900">
-            Finished ({finishedMatches.length})
-          </TabsTrigger>
-        </TabsList>
+      {error && <div className="bg-destructive/15 text-destructive p-3 rounded-md">{error}</div>}
+      
+      <Card>
+        <CardHeader>
+          <CardTitle>All Matches</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <div className="text-muted-foreground">Loading...</div>
+          ) : (
+            <div className="space-y-2">
+              {matches.map(match => (
+                <div key={match._id} className="flex items-center justify-between p-4 rounded-lg border">
+                  <div className="space-y-1">
+                    <div className="font-semibold">
+                      {match.homeTeam} vs {match.awayTeam}
+                    </div>
+                    <div className="text-sm text-muted-foreground space-x-2">
+                      <Badge variant={
+                        match.status === 'live' ? 'default' :
+                        match.status === 'finished' ? 'secondary' :
+                        'outline'
+                      }>
+                        {match.status}
+                      </Badge>
+                      <span>{match.matchDate?.slice(0,10)} {match.matchTime}</span>
+                      {match.venue && <span>• {match.venue}</span>}
+                    </div>
+                  </div>
+                  <div className="space-x-2">
+                    <Button
+                      variant="secondary"
+                      onClick={() => selectMatch(match._id)}
+                    >
+                      View
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      onClick={() => handleDeleteMatch(match._id)}
+                    >
+                      Delete
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
-        <TabsContent value="all">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {matches.map((match) => (
-              <MatchCard key={match.id} match={match} />
-            ))}
-          </div>
-        </TabsContent>
+      {selectedMatch && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Match Details</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="space-y-2">
+              <div className="text-xl font-semibold">
+                {selectedMatch.homeTeam} vs {selectedMatch.awayTeam}
+              </div>
+              <div className="flex gap-2 text-sm text-muted-foreground">
+                <Badge variant={
+                  selectedMatch.status === 'live' ? 'default' :
+                  selectedMatch.status === 'finished' ? 'secondary' :
+                  'outline'
+                }>
+                  {selectedMatch.status}
+                </Badge>
+                <span>{selectedMatch.matchDate?.slice(0,10)} {selectedMatch.matchTime}</span>
+                {selectedMatch.venue && <span>• {selectedMatch.venue}</span>}
+              </div>
+            </div>
 
-        <TabsContent value="live">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {liveMatches.map((match) => (
-              <MatchCard key={match.id} match={match} />
-            ))}
-          </div>
-        </TabsContent>
+            <div className="space-y-4">
+              <div>
+                <h3 className="font-medium mb-2">Match Status</h3>
+                <div className="flex gap-2">
+                  <Button
+                    variant="default"
+                    onClick={() => handleStatus(selectedMatch._id, "live")}
+                  >
+                    Mark Live
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => handleStatus(selectedMatch._id, "scheduled")}
+                  >
+                    Mark Scheduled
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    onClick={() => handleStatus(selectedMatch._id, "finished")}
+                  >
+                    Mark Finished
+                  </Button>
+                </div>
+              </div>
+            </div>
 
-        <TabsContent value="upcoming">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {upcomingMatches.map((match) => (
-              <MatchCard key={match.id} match={match} />
-            ))}
-          </div>
-        </TabsContent>
+            <div>
+              <h3 className="font-medium mb-2">Score</h3>
+              <form className="flex items-center gap-2" onSubmit={e => {
+                e.preventDefault()
+                handleScoreUpdate(
+                  selectedMatch._id,
+                  Number((e.currentTarget.elements.namedItem("homeScore") as HTMLInputElement).value),
+                  Number((e.currentTarget.elements.namedItem("awayScore") as HTMLInputElement).value)
+                )
+              }}>
+                <Input
+                  type="number"
+                  name="homeScore"
+                  className="w-20"
+                  defaultValue={selectedMatch.homeScore}
+                />
+                <span className="text-lg font-bold">-</span>
+                <Input
+                  type="number"
+                  name="awayScore"
+                  className="w-20"
+                  defaultValue={selectedMatch.awayScore}
+                />
+                <Button type="submit">Update Score</Button>
+              </form>
+            </div>
 
-        <TabsContent value="finished">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {finishedMatches.map((match) => (
-              <MatchCard key={match.id} match={match} />
-            ))}
-          </div>
-        </TabsContent>
-      </Tabs>
+            <Separator />
+
+            <div>
+              <h3 className="font-medium mb-3">Match Events</h3>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  {selectedMatch.events?.map((ev, idx) => (
+                    <div key={idx} className="flex items-center justify-between p-2 rounded-md bg-secondary/50">
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline" className="w-12 justify-center">
+                          {ev.minute}'
+                        </Badge>
+                        <span className="font-medium">{ev.type}</span>
+                        <span className="text-muted-foreground">
+                          {ev.team}
+                          {ev.player && <> • {ev.player}</>}
+                          {ev.description && <> • {ev.description}</>}
+                        </span>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDeleteEvent(idx)}
+                        className="text-destructive hover:text-destructive"
+                      >
+                        Delete
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+
+                <form className="grid grid-cols-2 md:flex gap-2 items-start" onSubmit={handleAddEvent}>
+                  <Input
+                    type="number"
+                    min="0"
+                    placeholder="Min"
+                    className="w-20"
+                    value={eventForm.minute}
+                    onChange={e => setEventForm({ ...eventForm, minute: e.target.value })}
+                    required
+                  />
+                  <Select
+                    value={eventForm.type}
+                    onValueChange={(value) => setEventForm({ ...eventForm, type: value })}
+                  >
+                    <SelectTrigger className="w-[200px]">
+                      <SelectValue placeholder="Select event type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="goal">Goal</SelectItem>
+                      <SelectItem value="own_goal">Own Goal</SelectItem>
+                      <SelectItem value="yellow_card">Yellow Card</SelectItem>
+                      <SelectItem value="red_card">Red Card</SelectItem>
+                      <SelectItem value="substitution">Substitution</SelectItem>
+                      <SelectItem value="penalty">Penalty</SelectItem>
+                      <SelectItem value="assist">Assist</SelectItem>
+                      <SelectItem value="injury">Injury</SelectItem>
+                      <SelectItem value="start">Start</SelectItem>
+                      <SelectItem value="end">End</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Select
+                    value={eventForm.team}
+                    onValueChange={(value) => setEventForm({ ...eventForm, team: value })}
+                  >
+                    <SelectTrigger className="w-[150px]">
+                      <SelectValue placeholder="Select team" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="home">Home</SelectItem>
+                      <SelectItem value="away">Away</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Input
+                    placeholder="Player"
+                    value={eventForm.player}
+                    onChange={e => setEventForm({ ...eventForm, player: e.target.value })}
+                  />
+                  <Input
+                    placeholder="Description"
+                    value={eventForm.description}
+                    onChange={e => setEventForm({ ...eventForm, description: e.target.value })}
+                  />
+                  <Button type="submit">Add Event</Button>
+                </form>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   )
 }
