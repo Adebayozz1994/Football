@@ -1,3 +1,5 @@
+"use client"
+import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -6,77 +8,68 @@ import Link from "next/link"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 
-export default function HomePage() {
-  const featuredMatches = [
-    {
-      id: 1,
-      homeTeam: "Lagos United",
-      awayTeam: "Kano Pillars",
-      homeScore: 2,
-      awayScore: 1,
-      state: "Lagos",
-      date: "2024-01-15",
-      time: "16:00",
-      status: "live",
-      minute: 78,
-      venue: "Teslim Balogun Stadium",
-    },
-    {
-      id: 2,
-      homeTeam: "Rivers United",
-      awayTeam: "Plateau United",
-      state: "Rivers",
-      date: "2024-01-15",
-      time: "18:00",
-      status: "upcoming",
-      venue: "Adokiye Amiesimaka Stadium",
-    },
-    {
-      id: 3,
-      homeTeam: "Enyimba FC",
-      awayTeam: "Heartland FC",
-      homeScore: 3,
-      awayScore: 0,
-      state: "Abia",
-      date: "2024-01-14",
-      time: "16:00",
-      status: "finished",
-      venue: "Enyimba International Stadium",
-    },
-  ]
+interface Match {
+  id: number | string
+  homeTeam: string
+  awayTeam: string
+  homeScore?: number
+  awayScore?: number
+  state?: string
+  date: string
+  time: string
+  status: "live" | "scheduled" | "finished"
+  minute?: number
+  venue?: string
+}
 
-  const latestNews = [
-    {
-      id: 1,
-      title: "Lagos United Completes Record-Breaking Transfer Deal",
-      excerpt:
-        "The club announces the signing of promising young talent in a deal worth ₦150 million, breaking previous transfer records...",
-      category: "Transfer",
-      date: "2024-01-14",
-      readTime: "4 min read",
-      image: "/placeholder.svg?height=300&width=500",
-      featured: true,
-    },
-    {
-      id: 2,
-      title: "European Roundup: Premier League Title Race Intensifies",
-      excerpt:
-        "Manchester City and Liverpool continue their battle at the top as the season reaches its crucial phase...",
-      category: "Europe",
-      date: "2024-01-14",
-      readTime: "6 min read",
-      image: "/placeholder.svg?height=300&width=500",
-    },
-    {
-      id: 3,
-      title: "NPFL Season Analysis: Top Performers So Far",
-      excerpt: "A comprehensive look at the standout players and teams making waves in the current NPFL season...",
-      category: "Analysis",
-      date: "2024-01-13",
-      readTime: "8 min read",
-      image: "/placeholder.svg?height=300&width=500",
-    },
-  ]
+interface News {
+  id: number | string
+  title: string
+  excerpt: string
+  category: string
+  date: string
+  readTime: string
+  image?: string
+  featured?: boolean
+}
+
+export default function HomePage() {
+  const [featuredMatches, setFeaturedMatches] = useState<Match[]>([])
+  const [latestNews, setLatestNews] = useState<News[]>([])
+  const [loadingMatches, setLoadingMatches] = useState(true)
+  const [loadingNews, setLoadingNews] = useState(true)
+
+  // Fetch matches from your backend
+  useEffect(() => {
+    setLoadingMatches(true)
+    fetch("http://localhost:5000/api/matches?limit=3")
+      .then((res) => res.json())
+      .then((data) => {
+        const matches: Match[] = Array.isArray(data) ? data : []
+        // Sort matches: live first, then scheduled, then finished
+        const sorted = [
+          ...matches.filter(m => m.status === "live"),
+          ...matches.filter(m => m.status === "scheduled"),
+          ...matches.filter(m => m.status === "finished"),
+        ]
+        setFeaturedMatches(sorted.slice(0, 3)) // show up to 3
+        setLoadingMatches(false)
+      })
+      .catch(() => setLoadingMatches(false))
+  }, [])
+
+  // Fetch news from your backend
+  useEffect(() => {
+    setLoadingNews(true)
+    fetch("http://localhost:5000/api/news?limit=3")
+      .then((res) => res.json())
+      .then((data) => {
+        const limitedNews = Array.isArray(data) ? data.slice(0, 3) : []
+        setLatestNews(limitedNews)
+        setLoadingNews(false)
+      })
+      .catch(() => setLoadingNews(false))
+  }, [])
 
   const stats = [
     { label: "Active Teams", value: "456", icon: Users },
@@ -127,8 +120,8 @@ export default function HomePage() {
       <section className="py-16 px-4 bg-gray-900/50">
         <div className="container mx-auto">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-            {stats.map((stat, index) => (
-              <div key={index} className="text-center">
+            {stats.map((stat) => (
+              <div key={stat.label} className="text-center">
                 <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-yellow-400/10 border border-yellow-400/20 mb-4">
                   <stat.icon className="h-8 w-8 text-yellow-400" />
                 </div>
@@ -146,71 +139,83 @@ export default function HomePage() {
           <div className="flex items-center justify-between mb-12">
             <div>
               <h2 className="text-4xl font-bold text-white mb-4">Featured Matches</h2>
-              <p className="text-gray-400 text-lg">Live and upcoming matches from across Nigeria</p>
+              <p className="text-gray-400 text-lg">Live, scheduled and finished matches from across Nigeria</p>
             </div>
             <Button variant="outline" className="btn-black bg-transparent" asChild>
               <Link href="/matches">View All Matches</Link>
             </Button>
           </div>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {featuredMatches.map((match) => (
-              <Card key={match.id} className="card-black-gold hover:scale-105 transition-all duration-300">
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <Badge
-                      variant={
-                        match.status === "live" ? "destructive" : match.status === "upcoming" ? "secondary" : "outline"
-                      }
-                      className={match.status === "live" ? "animate-pulse-gold" : ""}
-                    >
-                      {match.status === "live" ? (
-                        <div className="flex items-center">
-                          <div className="live-indicator w-2 h-2 mr-2"></div>
-                          LIVE {match.minute}'
+            {loadingMatches ? (
+              <div className="col-span-full text-center text-gray-300">Loading matches...</div>
+            ) : featuredMatches.length === 0 ? (
+              <div className="col-span-full text-center text-gray-300">No matches found.</div>
+            ) : (
+              featuredMatches.map((match) => (
+                <Card key={match.id ?? `${match.homeTeam}-${match.awayTeam}-${match.date}-${match.time}`} className="card-black-gold hover:scale-105 transition-all duration-300">
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <Badge
+                        variant={
+                          match.status === "live"
+                            ? "destructive"
+                            : match.status === "scheduled"
+                            ? "secondary"
+                            : "outline"
+                        }
+                        className={match.status === "live" ? "animate-pulse-gold" : ""}
+                      >
+                        {match.status === "live" ? (
+                          <div className="flex items-center">
+                            <div className="live-indicator w-2 h-2 mr-2"></div>
+                            LIVE {match.minute ? match.minute + "'" : ""}
+                          </div>
+                        ) : match.status === "scheduled" ? (
+                          "SCHEDULED"
+                        ) : (
+                          "FINISHED"
+                        )}
+                      </Badge>
+                      <div className="flex items-center text-sm text-yellow-400">
+                        <MapPin className="h-4 w-4 mr-1" />
+                        {match.state}
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-center mb-6">
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="text-center flex-1">
+                          <div className="font-semibold text-white text-lg">{match.homeTeam}</div>
                         </div>
-                      ) : match.status === "upcoming" ? (
-                        "UPCOMING"
-                      ) : (
-                        "FINISHED"
-                      )}
-                    </Badge>
-                    <div className="flex items-center text-sm text-yellow-400">
-                      <MapPin className="h-4 w-4 mr-1" />
-                      {match.state}
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-center mb-6">
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="text-center flex-1">
-                        <div className="font-semibold text-white text-lg">{match.homeTeam}</div>
-                      </div>
-                      <div className="text-4xl font-bold mx-6 text-yellow-400">
-                        {match.status === "finished" || match.status === "live"
-                          ? `${match.homeScore}-${match.awayScore}`
-                          : "VS"}
-                      </div>
-                      <div className="text-center flex-1">
-                        <div className="font-semibold text-white text-lg">{match.awayTeam}</div>
+                        <div className="text-4xl font-bold mx-6 text-yellow-400">
+                          {match.status === "finished" || match.status === "live"
+                            ? `${match.homeScore ?? "-"}-${match.awayScore ?? "-"}`
+                            : "VS"}
+                        </div>
+                        <div className="text-center flex-1">
+                          <div className="font-semibold text-white text-lg">{match.awayTeam}</div>
+                        </div>
                       </div>
                     </div>
-                  </div>
 
-                  <div className="space-y-3 text-sm text-gray-400 mb-6">
-                    <div className="flex items-center justify-center">
-                      <Calendar className="h-4 w-4 mr-2" />
-                      {match.date}
-                      <Clock className="h-4 w-4 ml-4 mr-2" />
-                      {match.time}
+                    <div className="space-y-3 text-sm text-gray-400 mb-6">
+                      <div className="flex items-center justify-center">
+                        <Calendar className="h-4 w-4 mr-2" />
+                        {match.date}
+                        <Clock className="h-4 w-4 ml-4 mr-2" />
+                        {match.time}
+                      </div>
+                      <div className="text-center text-xs">{match.venue}</div>
                     </div>
-                    <div className="text-center text-xs">{match.venue}</div>
-                  </div>
 
-                  <Button className="w-full btn-gold">{match.status === "live" ? "Watch Live" : "View Details"}</Button>
-                </CardContent>
-              </Card>
-            ))}
+                    <Button className="w-full btn-gold">
+                      {match.status === "live" ? "Watch Live" : "View Details"}
+                    </Button>
+                  </CardContent>
+                </Card>
+              ))
+            )}
           </div>
         </div>
       </section>
@@ -228,45 +233,51 @@ export default function HomePage() {
             </Button>
           </div>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {latestNews.map((article, index) => (
-              <Card
-                key={article.id}
-                className={`card-black-gold hover:scale-105 transition-all duration-300 ${index === 0 ? "md:col-span-2 lg:col-span-1" : ""}`}
-              >
-                <div className="aspect-video relative overflow-hidden rounded-t-lg">
-                  <img
-                    src={article.image || "/placeholder.svg"}
-                    alt={article.title}
-                    className="object-cover w-full h-full transition-transform duration-300 hover:scale-110"
-                  />
-                  {article.featured && (
-                    <Badge className="absolute top-4 left-4 bg-yellow-400 text-black">Featured</Badge>
-                  )}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div>
-                </div>
-                <CardHeader>
-                  <div className="flex items-center justify-between mb-3">
-                    <Badge variant="outline" className="border-yellow-400/30 text-yellow-400">
-                      {article.category}
-                    </Badge>
-                    <span className="text-sm text-gray-400">{article.readTime}</span>
+            {loadingNews ? (
+              <div className="col-span-full text-center text-gray-300">Loading news...</div>
+            ) : latestNews.length === 0 ? (
+              <div className="col-span-full text-center text-gray-300">No news found.</div>
+            ) : (
+              latestNews.map((article) => (
+                <Card
+                  key={article.id ?? `${article.title}-${article.date}`}
+                  className="card-black-gold hover:scale-105 transition-all duration-300"
+                >
+                  <div className="aspect-video relative overflow-hidden rounded-t-lg">
+                    <img
+                      src={article.image || "/placeholder.svg"}
+                      alt={article.title}
+                      className="object-cover w-full h-full transition-transform duration-300 hover:scale-110"
+                    />
+                    {article.featured && (
+                      <Badge className="absolute top-4 left-4 bg-yellow-400 text-black">Featured</Badge>
+                    )}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div>
                   </div>
-                  <CardTitle className="line-clamp-2 text-white hover:text-yellow-400 transition-colors">
-                    {article.title}
-                  </CardTitle>
-                  <CardDescription className="line-clamp-3 text-gray-300">{article.excerpt}</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center justify-between text-sm text-gray-400 mb-4">
-                    <div className="flex items-center">
-                      <Calendar className="h-4 w-4 mr-1" />
-                      {article.date}
+                  <CardHeader>
+                    <div className="flex items-center justify-between mb-3">
+                      <Badge variant="outline" className="border-yellow-400/30 text-yellow-400">
+                        {article.category}
+                      </Badge>
+                      <span className="text-sm text-gray-400">{article.readTime}</span>
                     </div>
-                  </div>
-                  <Button className="w-full btn-black">Read More</Button>
-                </CardContent>
-              </Card>
-            ))}
+                    <CardTitle className="line-clamp-2 text-white hover:text-yellow-400 transition-colors">
+                      {article.title}
+                    </CardTitle>
+                    <CardDescription className="line-clamp-3 text-gray-300">{article.excerpt}</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-center justify-between text-sm text-gray-400 mb-4">
+                      <div className="flex items-center">
+                        <Calendar className="h-4 w-4 mr-1" />
+                        {article.date}
+                      </div>
+                    </div>
+                    <Button className="w-full btn-black">Read More</Button>
+                  </CardContent>
+                </Card>
+              ))
+            )}
           </div>
         </div>
       </section>
@@ -279,31 +290,35 @@ export default function HomePage() {
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
             {[
               {
+                id: 'local-matches',
                 title: "Local Matches",
                 description: "Browse matches from all 36 Nigerian states + FCT",
                 icon: Trophy,
                 href: "/matches",
               },
               {
+                id: 'teams',
                 title: "Teams",
                 description: "Explore team profiles, stats, and fixtures",
                 icon: Users,
                 href: "/teams",
               },
               {
+                id: 'european-football',
                 title: "European Football",
                 description: "Live scores and news from top European leagues",
                 icon: Globe,
                 href: "/europe",
               },
               {
+                id: 'news-updates',
                 title: "News & Updates",
                 description: "Latest football news and match reports",
                 icon: Newspaper,
                 href: "/news",
               },
-            ].map((item, index) => (
-              <Link key={index} href={item.href}>
+            ].map((item) => (
+              <Link key={item.id} href={item.href}>
                 <Card className="card-black-gold text-center hover:scale-105 transition-all duration-300 cursor-pointer group h-full">
                   <CardHeader className="pb-8">
                     <div className="inline-flex items-center justify-center w-20 h-20 rounded-full gradient-gold mx-auto mb-6 group-hover:scale-110 transition-transform duration-300">
