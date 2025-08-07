@@ -1,9 +1,30 @@
+"use client"
+import { useEffect, useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Trophy, Users, Newspaper, TrendingUp, Calendar, MapPin, Bell, Activity } from "lucide-react"
 
+interface Match {
+  _id: string
+  homeTeam: string
+  awayTeam: string
+  state: string
+  status: "live" | "upcoming" | "finished"
+  score?: string
+  time?: string
+}
+
+interface NewsArticle {
+  _id: string
+  title: string
+  author: string
+  date: string
+  status: "published" | "draft"
+}
+
 export default function AdminDashboard() {
+  // dummy stats for now
   const stats = [
     {
       title: "Total Matches",
@@ -35,41 +56,57 @@ export default function AdminDashboard() {
     },
   ]
 
-  const recentMatches = [
-    {
-      id: 1,
-      homeTeam: "Lagos United",
-      awayTeam: "Kano Pillars",
-      state: "Lagos",
-      status: "live",
-      score: "2-1",
-    },
-    {
-      id: 2,
-      homeTeam: "Rivers United",
-      awayTeam: "Plateau United",
-      state: "Rivers",
-      status: "upcoming",
-      time: "16:00",
-    },
-  ]
+  const [recentMatches, setRecentMatches] = useState<Match[]>([])
+  const [recentNews, setRecentNews] = useState<NewsArticle[]>([])
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState("")
 
-  const recentNews = [
-    {
-      id: 1,
-      title: "Lagos United Signs New Striker",
-      author: "Admin User",
-      date: "2024-01-14",
-      status: "published",
-    },
-    {
-      id: 2,
-      title: "European Roundup: Premier League Weekend",
-      author: "News Admin",
-      date: "2024-01-14",
-      status: "draft",
-    },
-  ]
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true)
+      setError("")
+      try {
+        // Fetch any live match (or fallback to any match)
+        const matchRes = await fetch("http://localhost:5000/api/matches?status=live&limit=1")
+        let matches: Match[] = []
+        if (matchRes.ok) {
+          const data = await matchRes.json()
+          matches = data.length ? data : []
+        }
+        if (matches.length === 0) {
+          // fallback: fetch any match
+          const fallbackRes = await fetch("http://localhost:5000/api/matches?limit=1")
+          if (fallbackRes.ok) {
+            matches = await fallbackRes.json()
+          }
+        }
+
+        // Fetch any recent news article (published or any)
+        let news: NewsArticle[] = []
+        const newsRes = await fetch("http://localhost:5000/api/news?limit=1&sort=-date")
+        if (newsRes.ok) {
+          const data = await newsRes.json()
+          news = data.length ? data : []
+        }
+
+        setRecentMatches(matches)
+        setRecentNews(
+          news.map((n: any) => ({
+            _id: n._id,
+            title: n.title,
+            author: n.author,
+            date: n.date?.slice(0, 10),
+            status: n.status || "published",
+          }))
+        )
+      } catch (err: any) {
+        setError("Could not load dashboard data")
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchData()
+  }, [])
 
   return (
     <div className="space-y-6">
@@ -77,6 +114,9 @@ export default function AdminDashboard() {
         <h1 className="text-3xl font-bold">Admin Dashboard</h1>
         <p className="text-muted-foreground">Welcome back! Here's what's happening with your football platform.</p>
       </div>
+
+      {error && <div className="bg-red-100 text-red-600 p-2 rounded">{error}</div>}
+      {loading && <div className="text-center py-8 text-xl">Loading...</div>}
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -102,17 +142,18 @@ export default function AdminDashboard() {
           <CardHeader>
             <CardTitle className="flex items-center">
               <Trophy className="h-5 w-5 mr-2" />
-              Recent Matches
+              Recent Match
             </CardTitle>
-            <CardDescription>Latest match updates and live games</CardDescription>
+            <CardDescription>Latest match update (showing any live match or any match)</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
+              {recentMatches.length === 0 && <div className="text-gray-400 text-center">No match found.</div>}
               {recentMatches.map((match) => (
-                <div key={match.id} className="flex items-center justify-between p-3 border rounded-lg">
+                <div key={match._id} className="flex items-center justify-between p-3 border rounded-lg">
                   <div className="flex items-center space-x-3">
                     <Badge variant={match.status === "live" ? "destructive" : "secondary"}>
-                      {match.status === "live" ? "LIVE" : "UPCOMING"}
+                      {match.status.toUpperCase()}
                     </Badge>
                     <div>
                       <div className="font-medium">
@@ -125,7 +166,7 @@ export default function AdminDashboard() {
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="font-bold">{match.score || match.time}</div>
+                    <div className="font-bold">{match.score || match.time || "-"}</div>
                   </div>
                 </div>
               ))}
@@ -143,12 +184,13 @@ export default function AdminDashboard() {
               <Newspaper className="h-5 w-5 mr-2" />
               Recent News
             </CardTitle>
-            <CardDescription>Latest news articles and updates</CardDescription>
+            <CardDescription>Latest news article (showing any news)</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
+              {recentNews.length === 0 && <div className="text-gray-400 text-center">No news article found.</div>}
               {recentNews.map((article) => (
-                <div key={article.id} className="flex items-center justify-between p-3 border rounded-lg">
+                <div key={article._id} className="flex items-center justify-between p-3 border rounded-lg">
                   <div className="flex-1">
                     <div className="font-medium line-clamp-1">{article.title}</div>
                     <div className="text-sm text-muted-foreground">

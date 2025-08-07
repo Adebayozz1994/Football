@@ -16,11 +16,15 @@ interface NewsItem {
   createdAt?: string
 }
 
+const categories = ["All", "News", "Transfer", "Match", "Injury", "Analysis", "Rumor", "Other"]
+
 export default function PublicNewsList() {
   const [news, setNews] = useState<NewsItem[]>([])
   const [selected, setSelected] = useState<NewsItem | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
+  const [filterDate, setFilterDate] = useState("")
+  const [filterCategory, setFilterCategory] = useState("All")
 
   // Black and gold color palette
   const black = "rgb(24, 24, 24)"
@@ -45,8 +49,19 @@ export default function PublicNewsList() {
     fetchNews()
   }, [])
 
+  // --- Filtering ---
+  const filteredNews = news.filter(item => {
+    // Category filter
+    const matchesCategory = filterCategory === "All" || item.category === filterCategory
+    // Date filter (compare only date part)
+    const matchesDate = !filterDate || item.date?.slice(0, 10) === filterDate
+    return matchesCategory && matchesDate
+  })
+
   if (selected) {
-    // Show full details
+    // ... (your details code is unchanged)
+    // See your original code for details view...
+    // (keep as is)
     return (
       <>
         <Header />
@@ -61,7 +76,7 @@ export default function PublicNewsList() {
               <ArrowLeft size={24} className="group-hover:-translate-x-2 transition-transform" />
               <span className="text-lg">Back to News</span>
             </button>
-
+            {/* ...rest of details view... */}
             <article
               style={{ background: black, borderColor: goldDark }}
               className="rounded-2xl shadow-xl overflow-hidden border"
@@ -77,7 +92,6 @@ export default function PublicNewsList() {
                   />
                 </div>
               )}
-
               <div className="relative p-8 -mt-20 z-20">
                 <div className="flex flex-wrap items-center gap-4 mb-6">
                   <span
@@ -104,14 +118,12 @@ export default function PublicNewsList() {
                     }) : ''}
                   </time>
                 </div>
-
                 <h1
                   className="text-4xl font-bold mb-6"
                   style={{ color: gold, textShadow: `0 2px 6px ${goldDark}` }}
                 >
                   {selected.title}
                 </h1>
-
                 {selected.author && (
                   <div
                     className="inline-flex items-center gap-3 mb-8 px-4 py-2 rounded-full"
@@ -121,13 +133,11 @@ export default function PublicNewsList() {
                     <span className="font-medium text-white">{selected.author}</span>
                   </div>
                 )}
-
                 <div className="prose prose-lg max-w-none leading-relaxed" style={{ color: "#fafafa" }}>
                   {selected.description.split('\n').map((paragraph, idx) => (
                     <p key={idx} className="mb-4">{paragraph}</p>
                   ))}
                 </div>
-
                 {selected.createdAt && (
                   <div className="mt-12 pt-6 border-t" style={{ borderTopColor: goldDark }}>
                     <div
@@ -187,6 +197,37 @@ export default function PublicNewsList() {
             <div style={{ background: gold }} className="w-24 h-1 mx-auto rounded-full"></div>
           </div>
 
+          {/* Filter Section */}
+          <div className="flex flex-col md:flex-row gap-4 justify-center items-center mb-8">
+            <select
+              value={filterCategory}
+              onChange={e => setFilterCategory(e.target.value)}
+              className="border px-4 py-2 rounded text-black font-semibold"
+              style={{ minWidth: 180 }}
+            >
+              {categories.map(c => (
+                <option value={c} key={c}>{c}</option>
+              ))}
+            </select>
+            <input
+              type="date"
+              value={filterDate}
+              onChange={e => setFilterDate(e.target.value)}
+              className="border px-4 py-2 rounded text-black font-semibold"
+            />
+            {(filterDate || filterCategory !== "All") && (
+              <button
+                onClick={() => {
+                  setFilterDate("");
+                  setFilterCategory("All");
+                }}
+                className="bg-yellow-400 text-black px-4 py-2 rounded font-semibold shadow hover:bg-yellow-300 transition"
+              >
+                Reset Filters
+              </button>
+            )}
+          </div>
+
           {loading && (
             <div className="flex justify-center items-center min-h-[200px]">
               <div
@@ -211,14 +252,14 @@ export default function PublicNewsList() {
             </div>
           )}
 
-          {news.length === 0 && !loading && (
+          {filteredNews.length === 0 && !loading && (
             <div className="text-center py-12 rounded-lg" style={{ background: "#222" }}>
-              <p style={{ color: goldDark }}>No news available at the moment.</p>
+              <p style={{ color: goldDark }}>No news available for selected filter.</p>
             </div>
           )}
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {news.map(item => (
+            {filteredNews.map(item => (
               <article
                 key={item._id}
                 className="group cursor-pointer rounded-2xl shadow-lg overflow-hidden hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 border"

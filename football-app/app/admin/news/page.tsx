@@ -27,15 +27,12 @@ export default function NewsCrud() {
   const [filterCategory, setFilterCategory] = useState<string>("all")
   const [filterDate, setFilterDate] = useState<string>("")
   
-  // Fetch all news
+  // Fetch all news (no filter in backend, fetch all for UI filtering)
   const fetchNews = async () => {
     setLoading(true)
     setError("")
     try {
-      const queryParams = new URLSearchParams()
-      if (filterCategory !== "all") queryParams.set("category", filterCategory)
-      if (filterDate) queryParams.set("date", filterDate)
-      const response = await fetch(`http://localhost:5000/api/news?${queryParams.toString()}`)
+      const response = await fetch(`http://localhost:5000/api/news`)
       if (!response.ok) throw new Error("Could not fetch news")
       const data = await response.json()
       setNews(data)
@@ -49,7 +46,7 @@ export default function NewsCrud() {
   useEffect(() => {
     fetchNews()
     // eslint-disable-next-line
-  }, [filterCategory, filterDate])
+  }, [])
 
   // Create news
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -150,6 +147,13 @@ export default function NewsCrud() {
     })
   }
 
+  // UI filtering (client-side)
+  const filteredNews = news.filter(item => {
+    const matchesCategory = filterCategory === "all" || item.category === filterCategory
+    const matchesDate = !filterDate || item.date?.slice(0, 10) === filterDate
+    return matchesCategory && matchesDate
+  })
+
   return (
     <div className="max-w-6xl mx-auto mt-8 p-4 bg-white rounded shadow">
       <h2 className="text-xl font-semibold mb-4">Create News</h2>
@@ -192,6 +196,15 @@ export default function NewsCrud() {
           className="border px-2 py-1 rounded w-full md:w-1/2"
           placeholder="Filter by date"
         />
+        {(filterCategory !== "all" || filterDate) && (
+          <button
+            type="button"
+            onClick={() => { setFilterCategory("all"); setFilterDate(""); }}
+            className="bg-gray-200 px-4 py-2 rounded text-sm"
+          >
+            Reset Filters
+          </button>
+        )}
       </div>
 
       {/* News List */}
@@ -199,8 +212,8 @@ export default function NewsCrud() {
       {loading ? <div>Loading...</div> : null}
       {error && <div className="text-red-600 mb-2">{error}</div>}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {news.length === 0 && <div className="col-span-full text-center text-gray-500">No news found.</div>}
-        {news.map(item => (
+        {filteredNews.length === 0 && <div className="col-span-full text-center text-gray-500">No news found.</div>}
+        {filteredNews.map(item => (
           editingId === item._id ? (
             // Edit form
             <form key={item._id} onSubmit={handleEditSubmit} encType="multipart/form-data" className="col-span-full md:col-span-2 lg:col-span-1 space-y-2 border rounded p-2 bg-blue-50">
