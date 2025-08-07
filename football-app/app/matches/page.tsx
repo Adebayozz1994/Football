@@ -544,7 +544,7 @@ export default function MatchesPage() {
                   <div className="text-xs text-red-400 animate-pulse">LIVE</div>
                   {match.bigChance && (
                     <div className="mt-2 text-sm">
-                      <div className="bg-yellow-500 text-black px-2 py-1 rounded animate-pulse font-bold">
+                      <div className="text-xs text-red-500 px-1 py-1 rounded animate-pulse font-bold">
                         BIG CHANCE
                       </div>
                       <div className="text-xs mt-1 text-yellow-400">

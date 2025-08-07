@@ -151,7 +151,7 @@ export default function NewsCrud() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto mt-8 p-4 bg-white rounded shadow">
+    <div className="max-w-6xl mx-auto mt-8 p-4 bg-white rounded shadow">
       <h2 className="text-xl font-semibold mb-4">Create News</h2>
       {/* Create form */}
       <form onSubmit={handleSubmit} encType="multipart/form-data" className="space-y-4">
@@ -194,16 +194,16 @@ export default function NewsCrud() {
         />
       </div>
 
-      {/* List */}
+      {/* News List */}
       <h2 className="text-lg font-semibold mb-2">News List</h2>
       {loading ? <div>Loading...</div> : null}
       {error && <div className="text-red-600 mb-2">{error}</div>}
-      <div className="space-y-4">
-        {news.length === 0 && <div>No news found.</div>}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {news.length === 0 && <div className="col-span-full text-center text-gray-500">No news found.</div>}
         {news.map(item => (
           editingId === item._id ? (
             // Edit form
-            <form key={item._id} onSubmit={handleEditSubmit} encType="multipart/form-data" className="space-y-2 border rounded p-2 bg-blue-50">
+            <form key={item._id} onSubmit={handleEditSubmit} encType="multipart/form-data" className="col-span-full md:col-span-2 lg:col-span-1 space-y-2 border rounded p-2 bg-blue-50">
               <input name="title" className="w-full border px-2 py-1 rounded" defaultValue={editData.title} required />
               <select name="category" className="w-full border px-2 py-1 rounded" defaultValue={editData.category} required>
                 {categories.map(c => (<option value={c} key={c}>{c}</option>))}
@@ -222,22 +222,68 @@ export default function NewsCrud() {
               </div>
             </form>
           ) : (
-            <div key={item._id} className="border rounded p-2 flex flex-col md:flex-row md:items-center md:justify-between bg-gray-50">
-              <div className="flex-1">
-                <div className="font-bold">{item.title}</div>
-                <div className="text-sm text-gray-600">{item.category} &bull; {item.author}</div>
-                <div className="text-xs text-gray-500">{item.date?.slice(0, 10)}</div>
-                <div className="mt-1">{item.description}</div>
-                {item.image && (
-                  <img src={item.image} alt="news" className="mt-2 rounded max-w-xs max-h-32" />
-                )}
-              </div>
-              <div className="flex gap-2 mt-2 md:mt-0">
-                <button className="bg-green-600 text-white px-3 py-1 rounded" onClick={() => startEdit(item)}>
-                  Edit
-                </button>
-                <button className="bg-red-600 text-white px-3 py-1 rounded" onClick={() => handleDelete(item._id)}>
-                  Delete
+            <div
+              key={item._id}
+              className="relative flex flex-col border rounded-lg bg-white shadow-md hover:shadow-xl transition-shadow duration-300 overflow-hidden"
+            >
+              {item.image && (
+                <div className="h-40 w-full overflow-hidden bg-gray-100">
+                  <img
+                    src={item.image}
+                    alt={item.title}
+                    className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
+                    loading="lazy"
+                  />
+                </div>
+              )}
+              <div className="flex-1 flex flex-col p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="bg-blue-100 text-blue-600 text-xs px-2 py-1 rounded font-semibold uppercase">{item.category}</span>
+                  <span className="text-xs text-gray-500 ml-auto">{item.date?.slice(0, 10)}</span>
+                </div>
+                <h3 className="font-bold text-lg mb-1 truncate">{item.title}</h3>
+                <div className="text-xs text-gray-500 mb-2">{item.author}</div>
+                <p className="text-sm text-gray-700 mb-3 line-clamp-3">{item.description}</p>
+                <div className="flex gap-2 mt-auto">
+                  <button
+                    className="flex-1 bg-green-600 text-white px-3 py-1 rounded shadow hover:bg-green-700 transition"
+                    onClick={() => startEdit(item)}
+                  >
+                    Edit
+                  </button>
+                  <button
+                    className="flex-1 bg-red-600 text-white px-3 py-1 rounded shadow hover:bg-red-700 transition"
+                    onClick={() => handleDelete(item._id)}
+                  >
+                    Delete
+                  </button>
+                </div>
+                <button
+                  onClick={() => {
+                    const modal = document.createElement('div');
+                    modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4';
+                    modal.innerHTML = `
+                      <div class="bg-white rounded-lg max-w-lg w-full max-h-[90vh] overflow-y-auto p-6 relative">
+                        <button class="absolute top-2 right-2 bg-gray-200 rounded-full w-8 h-8 flex items-center justify-center hover:bg-gray-300" aria-label="Close">&times;</button>
+                        <h2 class="text-2xl font-bold mb-2">${item.title}</h2>
+                        <div class="flex items-center gap-2 text-xs text-gray-500 mb-2">
+                          <span class="bg-blue-100 text-blue-600 px-2 py-1 rounded font-semibold uppercase">${item.category}</span>
+                          <span>${item.author}</span>
+                          <span>${item.date?.slice(0, 10)}</span>
+                        </div>
+                        ${item.image ? `<img src="${item.image}" alt="${item.title}" class="w-full rounded mb-4 max-h-60 object-cover"/>` : ''}
+                        <p class="text-gray-700 whitespace-pre-line">${item.description}</p>
+                      </div>
+                    `;
+                    document.body.appendChild(modal);
+                    modal.querySelector('button[aria-label="Close"]')?.addEventListener('click', () => modal.remove());
+                    modal.addEventListener('click', (e) => {
+                      if (e.target === modal) modal.remove();
+                    });
+                  }}
+                  className="mt-3 w-full text-center text-blue-600 hover:underline text-xs"
+                >
+                  View Full Details
                 </button>
               </div>
             </div>
