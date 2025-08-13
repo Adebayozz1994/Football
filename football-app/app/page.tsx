@@ -39,26 +39,23 @@ export default function HomePage() {
   const [loadingMatches, setLoadingMatches] = useState(true)
   const [loadingNews, setLoadingNews] = useState(true)
 
-  // Fetch matches from your backend
   useEffect(() => {
     setLoadingMatches(true)
     fetch("http://localhost:5000/api/matches?limit=3")
       .then((res) => res.json())
       .then((data) => {
         const matches: Match[] = Array.isArray(data) ? data : []
-        // Sort matches: live first, then scheduled, then finished
         const sorted = [
           ...matches.filter(m => m.status === "live"),
           ...matches.filter(m => m.status === "scheduled"),
           ...matches.filter(m => m.status === "finished"),
         ]
-        setFeaturedMatches(sorted.slice(0, 3)) // show up to 3
+        setFeaturedMatches(sorted.slice(0, 3)) 
         setLoadingMatches(false)
       })
       .catch(() => setLoadingMatches(false))
   }, [])
 
-  // Fetch news from your backend
   useEffect(() => {
     setLoadingNews(true)
     fetch("http://localhost:5000/api/news?limit=3")

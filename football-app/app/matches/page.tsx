@@ -21,8 +21,8 @@ interface MatchEvent {
   description?: string
   additionalInfo?: {
     assistedBy?: string
-    replacedPlayer?: string // for substitutions
-    reason?: string // for cards
+    replacedPlayer?: string 
+    reason?: string
   }
 }
 
@@ -121,11 +121,11 @@ const MatchDetailsModal = ({ match, onClose }: { match: Match | null; onClose: (
                     </span>
                     {match.status === "live" && (
                       <>
-                        <div className="text-xs text-red-400 animate-pulse mt-2">LIVE</div>
+                        <div className="text-xs text-red-400 animate-pulse mt-2">live</div>
                         {match.bigChance && (
                           <div className="mt-2 text-sm">
                             <div className="bg-yellow-500 text-black px-2 py-1 rounded animate-pulse font-bold">
-                              BIG CHANCE
+                              big chance
                             </div>
                             <div className="text-xs mt-1 text-yellow-400">
                               {match.bigChance.team === "home" ? match.homeTeam : match.awayTeam}
@@ -208,13 +208,11 @@ export default function MatchesPage() {
   const [selectedDate, setSelectedDate] = useState("all")
   const [selectedMatch, setSelectedMatch] = useState<Match | null>(null)
 
-  // Function to fetch matches
   const fetchMatches = async (isPolling = false) => {
     if (isPolling) {
       setUpdating(true)
     }
     try {
-      // Add query parameters for filtering
       const params = new URLSearchParams()
       if (selectedDate !== 'all') {
         params.append('dateFilter', selectedDate)
@@ -238,7 +236,6 @@ export default function MatchesPage() {
                             newMatch.awayScore !== oldMatch.awayScore
 
           if (scoreChange) {
-            // Keep the old score but add big chance
             return {
               ...oldMatch,
               bigChance: {
@@ -252,17 +249,16 @@ export default function MatchesPage() {
         return newMatch
       })
 
-      // First update with big chance indicator
       setMatches(updatedMatches)
       setError("")
 
-      // After 3 seconds, update the actual scores
+      // After 5 seconds
       setTimeout(() => {
         setMatches(prev => 
           prev.map(match => {
             const newMatch = newMatches.find(m => m._id === match._id)
             if (newMatch && match.bigChance) {
-              // Update the score and remove big chance
+
               return {
                 ...newMatch,
                 bigChance: undefined
@@ -288,21 +284,18 @@ export default function MatchesPage() {
     fetchMatches()
   }, [])
 
-  // Polling for live matches with dynamic intervals
   useEffect(() => {
-    // Only start polling if we have any live matches
     const hasLiveMatches = matches.some(match => match.status === "live")
     
     if (hasLiveMatches) {
-      // Update more frequently (every 10 seconds) for live matches
       const fastPollInterval = setInterval(() => {
         fetchMatches(true)
-      }, 10000)
+      }, 5000)
 
       let ws: WebSocket | null = null;
 
       try {
-        // Try to set up WebSocket connection, but don't fail if it's not available
+        //  WebSocket connection
         ws = new WebSocket('ws://localhost:5000/ws/matches');
         
         ws.onopen = () => {
@@ -319,7 +312,6 @@ export default function MatchesPage() {
             };
             
             if (data.type === 'score_update') {
-              // Immediately show big chance
               setMatches(prev => prev.map(match => {
                 if (match._id === data.matchId) {
                   return {
@@ -334,7 +326,6 @@ export default function MatchesPage() {
                 return match;
               }));
 
-              // Update score after 3 seconds
               setTimeout(() => {
                 setMatches(prev => prev.map(match => {
                   if (match._id === data.matchId) {
@@ -366,7 +357,6 @@ export default function MatchesPage() {
         console.log('WebSocket setup failed, using polling instead');
       }
 
-      // Cleanup function
       return () => {
         clearInterval(fastPollInterval);
         if (ws) {
@@ -376,7 +366,6 @@ export default function MatchesPage() {
     }
   }, [matches])
 
-  // If loading, show loading state
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -385,7 +374,6 @@ export default function MatchesPage() {
     )
   }
 
-  // If error, show error state
   if (error) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -408,7 +396,7 @@ export default function MatchesPage() {
     if (selectedDate !== "all") {
       // Ensure proper date parsing by converting YYYY-MM-DD to Date object
       const [year, month, day] = match.matchDate.split('-').map(num => parseInt(num))
-      const matchDate = new Date(year, month - 1, day) // month is 0-based in JS Date
+      const matchDate = new Date(year, month - 1, day)
       
       const today = new Date()
       today.setHours(0, 0, 0, 0)
@@ -509,7 +497,7 @@ export default function MatchesPage() {
             {match.status === "live" ? (
               <div className="flex items-center">
                 <div className="live-indicator w-2 h-2 mr-2"></div>
-                LIVE
+                Live
               </div>
             ) : match.status === "scheduled" ? (
               "UPCOMING"
@@ -541,11 +529,11 @@ export default function MatchesPage() {
               </div>
               {match.status === "live" && (
                 <>
-                  <div className="text-xs text-red-400 animate-pulse">LIVE</div>
+                  <div className="text-xs text-red-400 animate-pulse">Live</div>
                   {match.bigChance && (
                     <div className="mt-2 text-sm">
                       <div className="text-xs text-red-500 px-1 py-1 rounded animate-pulse font-bold">
-                        BIG CHANCE
+                        big chance
                       </div>
                       <div className="text-xs mt-1 text-yellow-400">
                         {match.bigChance.team === "home" ? match.homeTeam : match.awayTeam}
@@ -596,21 +584,21 @@ export default function MatchesPage() {
       <Header />
 
       <div className="container mx-auto px-4 py-12">
-        {/* Hero Section */}
         <div className="text-center mb-12">
           <h1 className="text-5xl font-bold mb-4 text-white font-playfair">
             <span className="text-gradient-gold">Football</span> Matches
           </h1>
           <p className="text-xl text-gray-400 max-w-3xl mx-auto">
             Follow all live matches, upcoming fixtures, and results from Nigerian local leagues across all 36 states +
-            FCT
+            OGBOMOSO
           </p>
         </div>
 
-        {/* Filters */}
         <div className="mb-12">
           <Card className="card-black-gold">
+
             <CardContent className="p-6">
+
               <div className="flex flex-col lg:flex-row gap-4">
                 <div className="relative flex-1">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gold-400" />
@@ -664,11 +652,12 @@ export default function MatchesPage() {
                   Filter
                 </Button>
               </div>
+
             </CardContent>
+            
           </Card>
         </div>
 
-        {/* Match Tabs */}
         {updating && (
           <div className="text-center mb-4">
             <span className="inline-flex items-center text-sm text-gold-400">

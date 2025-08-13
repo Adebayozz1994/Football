@@ -306,5 +306,6 @@ module.exports = {
   markLive,
   getAllMatches,
   getMatchById,
+  
   deleteMatch
 };
