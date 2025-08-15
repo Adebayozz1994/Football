@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Separator } from "@/components/ui/separator"
 import { useToast } from "@/components/ui/use-toast"
 import { Save, CheckCircle, KeyRound, RefreshCcw, Lock } from "lucide-react"
+import axios from "@/utils/axios"
 
 export default function UserSettingsPage() {
   const { toast } = useToast()
@@ -51,16 +52,16 @@ export default function UserSettingsPage() {
     setIsChangeLoading(true)
     try {
       const token = typeof window !== "undefined" ? localStorage.getItem("token") : null
-      const res = await fetch("http://localhost:5000/api/user/change-password", {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(changePasswordForm),
-      })
-      const data = await res.json()
-      if (!res.ok || !data.success) {
+      const { data } = await axios.put(
+        "http://localhost:5000/api/user/change-password",
+        changePasswordForm,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      )
+      if (!data.success) {
         toast({
           title: "Change Password Failed",
           description: data.message,
@@ -88,13 +89,11 @@ export default function UserSettingsPage() {
     e.preventDefault()
     setIsForgotLoading(true)
     try {
-      const res = await fetch("http://localhost:5000/api/user/forgot-password", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(forgotPasswordForm),
-      })
-      const data = await res.json()
-      if (!res.ok || !data.success) {
+      const { data } = await axios.post(
+        "/api/user/forgot-password",
+        forgotPasswordForm
+      )
+      if (!data.success) {
         toast({
           title: "Forgot Password Failed",
           description: data.message,
@@ -106,7 +105,6 @@ export default function UserSettingsPage() {
           description: "A reset token has been sent to your email address.",
           action: <CheckCircle className="text-green-500" />,
         })
-        // For dev, show token
         setResetToken(data.resetToken || "")
       }
     } catch (error) {
@@ -123,13 +121,11 @@ export default function UserSettingsPage() {
     e.preventDefault()
     setIsResetLoading(true)
     try {
-      const res = await fetch("http://localhost:5000/api/user/reset-password", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(resetPasswordForm),
-      })
-      const data = await res.json()
-      if (!res.ok || !data.success) {
+      const { data } = await axios.post(
+        "http://localhost:5000/api/user/reset-password",
+        resetPasswordForm
+      )
+      if (!data.success) {
         toast({
           title: "Reset Password Failed",
           description: data.message,

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, Suspense } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
@@ -8,8 +8,9 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/components/ui/use-toast"
 import { Lock, CheckCircle } from "lucide-react"
+import axios from "@/utils/axios"
 
-export default function AdminResetPasswordPage() {
+function AdminResetPasswordContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const token = searchParams.get("token") || ""
@@ -22,13 +23,9 @@ export default function AdminResetPasswordPage() {
     e.preventDefault()
     setIsLoading(true)
     try {
-      const res = await fetch("http://localhost:5000/api/admin/reset-password", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token, newPassword }),
-      })
-      const data = await res.json()
-      if (!res.ok || !data.success) {
+      const res = await axios.post("/admin/reset-password", { token, newPassword })
+      const data = res.data
+      if (!data.success) {
         toast({
           title: "Reset Password Failed",
           description: data.message,
@@ -46,13 +43,22 @@ export default function AdminResetPasswordPage() {
         }, 1800)
       }
     } catch (err) {
-      toast({
-        title: "Reset Password Failed",
-        description: "Server error while resetting password.",
-        variant: "destructive",
-      })
+      if (err instanceof Error) {
+        toast({
+          title: "Reset Password Failed",
+          description: err.message || "Server error while resetting password.",
+          variant: "destructive",
+        })
+      } else {
+        toast({
+          title: "Reset Password Failed",
+          description: "An unknown error occurred.",
+          variant: "destructive",
+        })
+      }
+    } finally {
+      setIsLoading(false)
     }
-    setIsLoading(false)
   }
 
   return (
@@ -108,5 +114,13 @@ export default function AdminResetPasswordPage() {
         </Card>
       </div>
     </div>
+  )
+}
+
+export default function AdminResetPasswordPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <AdminResetPasswordContent />
+    </Suspense>
   )
 }

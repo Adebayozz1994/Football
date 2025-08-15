@@ -11,7 +11,12 @@ const createNews = async (req, res) => {
     if (req.file) {
       const result = await new Promise((resolve, reject) => {
         const upload_stream = cloudinary.uploader.upload_stream(
-          { resource_type: "image", folder: "news" },
+          {
+            resource_type: "image",
+            folder: "news",
+            format: "webp", 
+            quality: "auto", 
+          },
           (error, result) => {
             if (error) return reject(error);
             resolve(result);
@@ -81,11 +86,15 @@ const updateNews = async (req, res) => {
     const { id } = req.params;
     let updateFields = req.body;
 
-    // Handle image upload if file is sent
     if (req.file) {
       const result = await new Promise((resolve, reject) => {
         const upload_stream = cloudinary.uploader.upload_stream(
-          { resource_type: "image", folder: "news" },
+          {
+            resource_type: "image",
+            folder: "news",
+            format: "webp", 
+            quality: "auto", 
+          },
           (error, result) => {
             if (error) return reject(error);
             resolve(result);

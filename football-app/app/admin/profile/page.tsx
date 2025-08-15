@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { useToast } from "@/components/ui/use-toast"
@@ -27,6 +27,8 @@ import {
   Users,
 } from "lucide-react"
 import Link from "next/link"
+import Image from "next/image"
+import axios from "@/utils/axios"
 
 export default function AdminProfilePage() {
   const { toast } = useToast()
@@ -66,13 +68,13 @@ export default function AdminProfilePage() {
         return
       }
       try {
-        const res = await fetch("http://localhost:5000/api/admin/profile", {
+        const res = await axios.get("/admin/profile", {
           headers: {
             Authorization: `Bearer ${token}`,
           },
         })
-        const data = await res.json()
-        if (!res.ok || !data.success || !data.data?.admin) {
+        const data = res.data
+        if (!data.success || !data.data?.admin) {
           setIsLoading(false)
           setUser(null)
           return
@@ -161,39 +163,41 @@ export default function AdminProfilePage() {
       if (avatarFileRef.current) {
         fd.append("avatar", avatarFileRef.current)
       }
-      const res = await fetch("http://localhost:5000/api/admin/profile", {
-        method: "PUT",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          // DO NOT SET Content-Type when using FormData
-        },
-        body: fd,
-      })
-      const data = await res.json()
-      if (!res.ok || !data.success) {
+      const res = await axios.put(
+        "/admin/profile",
+        fd,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            // DO NOT SET Content-Type when using FormData
+          },
+        }
+      );
+      const data = res.data;
+      if (!data.success) {
         toast({
           title: "Update Failed",
           description: data.message || "Failed to update profile. Please try again.",
           variant: "destructive",
           action: <XCircle className="text-red-500" />,
-        })
+        });
       } else {
         setProfile((prev: any) => ({
           ...prev,
           ...formData,
           avatar_url: data.data.admin.avatar || formData.avatar_url,
-        }))
+        }));
         setFormData((prev) => ({
           ...prev,
           avatar_url: data.data.admin.avatar || prev.avatar_url,
-        }))
-        avatarFileRef.current = null
+        }));
+        avatarFileRef.current = null;
         toast({
           title: "Profile Updated",
           description: "Your profile has been successfully updated.",
           action: <CheckCircle className="text-green-500" />,
-        })
-        setIsEditing(false)
+        });
+        setIsEditing(false);
       }
     } catch (error) {
       toast({
@@ -342,9 +346,14 @@ export default function AdminProfilePage() {
           <CardHeader className="flex flex-col items-center">
             <div className="relative group mb-4">
               <Avatar className="h-24 w-24 border-2 border-yellow-400">
-                <AvatarImage
+                <Image
                   src={formData.avatar_url || "/placeholder-user.jpg"}
                   alt={formData.full_name || "User"}
+                  width={96} // Match the size of the avatar (24x24 in rem)
+                  height={96}
+                  className="rounded-full border-2 border-yellow-400"
+                  placeholder="blur"
+                  blurDataURL="/placeholder-user.jpg" // Optional placeholder
                 />
                 <AvatarFallback className="bg-gray-800 text-yellow-400 text-4xl">
                   {formData.full_name ? formData.full_name.charAt(0).toUpperCase() : <User className="h-12 w-12" />}

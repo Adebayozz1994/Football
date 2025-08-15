@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import axios from "axios"
+import axios from "@/utils/axios"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -210,30 +210,28 @@ export default function MatchesPage() {
 
   const fetchMatches = async (isPolling = false) => {
     if (isPolling) {
-      setUpdating(true)
+      setUpdating(true);
     }
     try {
-      const params = new URLSearchParams()
+      const params = new URLSearchParams();
       if (selectedDate !== 'all') {
-        params.append('dateFilter', selectedDate)
+        params.append('dateFilter', selectedDate);
       }
       if (selectedState !== 'all') {
-        params.append('status', selectedState)
+        params.append('status', selectedState);
       }
       if (searchTerm) {
-        params.append('search', searchTerm)
+        params.append('search', searchTerm);
       }
 
-      const response = await axios.get(`http://localhost:5000/api/matches?${params.toString()}`)
-      const newMatches = response.data as Match[]
+      const response = await axios.get(`/matches?${params.toString()}`);
+      const newMatches = response.data as Match[];
 
-      // Compare scores and add big chance if there's a potential update
       const updatedMatches: Match[] = newMatches.map((newMatch: Match) => {
-        const oldMatch = matches.find(m => m._id === newMatch._id)
+        const oldMatch = matches.find(m => m._id === newMatch._id);
         if (oldMatch && newMatch.status === "live") {
-          // Check if there's a score change coming
           const scoreChange = newMatch.homeScore !== oldMatch.homeScore || 
-                            newMatch.awayScore !== oldMatch.awayScore
+                            newMatch.awayScore !== oldMatch.awayScore;
 
           if (scoreChange) {
             return {
@@ -243,38 +241,40 @@ export default function MatchesPage() {
                 description: "Potential goal!",
                 timestamp: Date.now()
               }
-            } as Match
+            } as Match;
           }
         }
-        return newMatch
-      })
+        return newMatch;
+      });
 
-      setMatches(updatedMatches)
-      setError("")
+      setMatches(updatedMatches);
+      setError("");
 
-      // After 5 seconds
       setTimeout(() => {
         setMatches(prev => 
           prev.map(match => {
-            const newMatch = newMatches.find(m => m._id === match._id)
+            const newMatch = newMatches.find(m => m._id === match._id);
             if (newMatch && match.bigChance) {
-
               return {
                 ...newMatch,
                 bigChance: undefined
-              }
+              };
             }
-            return match
+            return match;
           })
-        )
-      }, 5000)
+        );
+      }, 5000);
     } catch (err) {
-      setError("Failed to load matches")
-      console.error("Error fetching matches:", err)
+      if (err instanceof Error) {
+        setError(err.message || "Failed to load matches");
+      } else {
+        setError("An unknown error occurred");
+      }
+      console.error("Error fetching matches:", err);
     } finally {
-      setLoading(false)
+      setLoading(false);
       if (isPolling) {
-        setUpdating(false)
+        setUpdating(false);
       }
     }
   }

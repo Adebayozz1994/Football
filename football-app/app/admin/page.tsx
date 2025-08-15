@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Trophy, Users, Newspaper, TrendingUp, Calendar, MapPin, Bell, Activity } from "lucide-react"
+import axios from "@/utils/axios"
 
 interface Match {
   _id: string
@@ -67,27 +68,18 @@ export default function AdminDashboard() {
       setError("")
       try {
         // Fetch any live match (or fallback to any match)
-        const matchRes = await fetch("http://localhost:5000/api/matches?status=live&limit=1")
         let matches: Match[] = []
-        if (matchRes.ok) {
-          const data = await matchRes.json()
-          matches = data.length ? data : []
-        }
-        if (matches.length === 0) {
-          // fallback: fetch any match
-          const fallbackRes = await fetch("http://localhost:5000/api/matches?limit=1")
-          if (fallbackRes.ok) {
-            matches = await fallbackRes.json()
-          }
+        try {
+          const matchRes = await axios.get("/matches", { params: { status: "live", limit: 1 } })
+          matches = matchRes.data.length ? matchRes.data : []
+        } catch {
+          const fallbackRes = await axios.get("/matches", { params: { limit: 1 } })
+          matches = fallbackRes.data
         }
 
         // Fetch any recent news article (published or any)
-        let news: NewsArticle[] = []
-        const newsRes = await fetch("http://localhost:5000/api/news?limit=1&sort=-date")
-        if (newsRes.ok) {
-          const data = await newsRes.json()
-          news = data.length ? data : []
-        }
+        const newsRes = await axios.get("/news", { params: { limit: 1, sort: "-date" } })
+        const news = newsRes.data.length ? newsRes.data : []
 
         setRecentMatches(matches)
         setRecentNews(
@@ -99,8 +91,12 @@ export default function AdminDashboard() {
             status: n.status || "published",
           }))
         )
-      } catch (err: any) {
-        setError("Could not load dashboard data")
+      } catch (err) {
+        if (err instanceof Error) {
+          setError(err.message || "Failed to fetch data.")
+        } else {
+          setError("An unknown error occurred.")
+        }
       } finally {
         setLoading(false)
       }

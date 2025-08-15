@@ -15,6 +15,7 @@ import { Trophy, Eye, EyeOff, Mail, Lock, User, MapPin, ArrowRight, Facebook, Ch
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { useToast } from "@/components/ui/use-toast"
+import axios from '@/utils/axios';
 
 export default function AdminSignupPage() {
   const [showPassword, setShowPassword] = useState(false)
@@ -73,40 +74,35 @@ export default function AdminSignupPage() {
     setIsLoading(true)
 
     try {
-      const res = await fetch('http://localhost:5000/api/admin/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          firstName: formData.firstName,
-          lastName: formData.lastName,
-          email: formData.email,
-          password: formData.password,
-          phone: formData.phone,
-          favoriteState: formData.favoriteState,
-          favoriteTeam: formData.favoriteTeam
-        })
+      const res = await axios.post('/admin/register', {
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        email: formData.email,
+        password: formData.password,
+        phone: formData.phone,
+        favoriteState: formData.favoriteState,
+        favoriteTeam: formData.favoriteTeam,
       });
-      const data = await res.json();
-      if (!res.ok) {
-        toast({
-          title: "Signup Failed",
-          description: data.message || "An error occurred during signup.",
-          variant: "destructive",
-        });
-        setIsLoading(false);
-        return;
-      }
+      const data = res.data;
       toast({
         title: "Account Created!",
-        description: "Your account has been created successfully.",
+        description: "Your admin account has been successfully created.",
       });
       router.push("/admin/login");
-    } catch (error) {
-      toast({
-        title: "Signup Failed",
-        description: "An error occurred during signup. Please try again.",
-        variant: "destructive",
-      });
+    } catch (err) {
+      if (err instanceof Error) {
+        toast({
+          title: "Signup Failed",
+          description: err.message || "An error occurred during signup.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Signup Failed",
+          description: "An unknown error occurred.",
+          variant: "destructive",
+        });
+      }
     } finally {
       setIsLoading(false);
     }
@@ -114,7 +110,6 @@ export default function AdminSignupPage() {
 
   const handleSocialSignup = async (provider: "google" | "facebook") => {
     setIsLoading(true)
-    // TODO: Implement social authentication with your chosen provider
     try {
       await new Promise(resolve => setTimeout(resolve, 1000))
       toast({

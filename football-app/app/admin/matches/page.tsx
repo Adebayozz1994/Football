@@ -1,6 +1,6 @@
 'use client'
 
-import axios from 'axios'
+import axios from '@/utils/axios';
 import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -27,15 +27,13 @@ type Match = {
   }[]
 }
 
-const API = "http://localhost:5000/api/matches"
-
 // Helper to get token from localStorage
 const getToken = () => {
   if (typeof window !== "undefined") {
-    return localStorage.getItem("admin_token")
+    return localStorage.getItem("admin_token");
   }
-  return null
-}
+  return null;
+};
 
 export default function MatchesPage() {
   const [matches, setMatches] = useState<Match[]>([])
@@ -59,14 +57,19 @@ export default function MatchesPage() {
 
   // Fetch all matches
   const fetchMatches = async () => {
-    setLoading(true)
+    setLoading(true);
     try {
-      const res = await axios.get(API)
-      setMatches(res.data)
-    } catch (err: any) {
-      setError(err.response?.data?.message || "Error fetching matches")
+      const res = await axios.get(`/matches`);
+      setMatches(res.data);
+    } catch (err) {
+      if (err instanceof Error) {
+        setError(err.message || "Error fetching matches");
+      } else {
+        setError("An unknown error occurred");
+      }
+    } finally {
+      setLoading(false);
     }
-    setLoading(false)
   }
 
   useEffect(() => {
@@ -83,7 +86,7 @@ export default function MatchesPage() {
         setError("Admin token is required")
         return
       }
-      await axios.post(API, form, {
+      await axios.post(`/matches`, form, {
         headers: {
           Authorization: `Bearer ${token}`
         }
@@ -100,7 +103,7 @@ export default function MatchesPage() {
     setError("")
     setSelectedMatch(null)
     try {
-      const res = await axios.get(`${API}/${id}`)
+      const res = await axios.get(`/matches/${id}`)
       setSelectedMatch(res.data)
     } catch (err: any) {
       setError(err.response?.data?.message || "Error fetching match")
@@ -133,7 +136,7 @@ export default function MatchesPage() {
         return
       }
 
-      await axios.patch(`${API}/${id}/score`, 
+      await axios.patch(`/matches/${id}/score`, 
         { homeScore, awayScore },
         {
           headers: {
@@ -170,7 +173,7 @@ export default function MatchesPage() {
                       status === "scheduled" ? "schedule" : 
                       "finish";
       
-      await axios.patch(`${API}/${id}/${endpoint}`, {}, {
+      await axios.patch(`/matches/${id}/${endpoint}`, {}, {
         headers: {
           Authorization: `Bearer ${token}`
         }
@@ -201,7 +204,7 @@ export default function MatchesPage() {
         player: eventForm.player,
         description: eventForm.description
       }
-      await axios.post(`${API}/${selectedMatch._id}/events`, body, {
+      await axios.post(`/matches/${selectedMatch._id}/events`, body, {
         headers: {
           Authorization: `Bearer ${token}`
         }
@@ -223,7 +226,7 @@ export default function MatchesPage() {
         setError("Admin token is required")
         return
       }
-      await axios.delete(`${API}/${selectedMatch._id}/events/${index}`, {
+      await axios.delete(`/matches/${selectedMatch._id}/events/${index}`, {
         headers: {
           Authorization: `Bearer ${token}`
         }
@@ -243,7 +246,7 @@ export default function MatchesPage() {
         setError("Admin token is required")
         return
       }
-      await axios.delete(`${API}/${id}`, {
+      await axios.delete(`/matches/${id}`, {
         headers: {
           Authorization: `Bearer ${token}`
         }

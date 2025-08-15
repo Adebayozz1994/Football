@@ -27,6 +27,7 @@ import {
   Users,
 } from "lucide-react"
 import Link from "next/link"
+import axios from "@/utils/axios"
 
 export default function UserProfilePage() {
   const { toast } = useToast()
@@ -65,13 +66,13 @@ export default function UserProfilePage() {
         return
       }
       try {
-        const res = await fetch("http://localhost:5000/api/user/profile", {
+        const res = await axios.get("/user/profile", {
           headers: {
             Authorization: `Bearer ${token}`,
           },
         })
-        const data = await res.json()
-        if (!res.ok || !data.success || !data.data?.user) {
+        const data = res.data
+        if (!data.success || !data.data?.user) {
           setIsLoading(false)
           setUser(null)
           return
@@ -157,15 +158,14 @@ export default function UserProfilePage() {
       if (avatarFileRef.current) {
         fd.append("avatar", avatarFileRef.current)
       }
-      const res = await fetch("http://localhost:5000/api/user/profile", {
-        method: "PUT",
+
+      const res = await axios.put("/user/profile", fd, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
-        body: fd,
       })
-      const data = await res.json()
-      if (!res.ok || !data.success) {
+      const data = res.data
+      if (!data.success) {
         toast({
           title: "Update Failed",
           description: data.message || "Failed to update profile. Please try again.",

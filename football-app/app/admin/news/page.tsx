@@ -1,6 +1,8 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
+import Image from "next/image"
+import axios from "@/utils/axios"
 
 interface NewsItem {
   _id: string
@@ -32,12 +34,14 @@ export default function NewsCrud() {
     setLoading(true)
     setError("")
     try {
-      const response = await fetch(`http://localhost:5000/api/news`)
-      if (!response.ok) throw new Error("Could not fetch news")
-      const data = await response.json()
-      setNews(data)
-    } catch (err: any) {
-      setError(err.message || "Error occurred")
+      const res = await axios.get("/news")
+      setNews(res.data)
+    } catch (err) {
+      if (err instanceof Error) {
+        setError(err.message || "Error occurred")
+      } else {
+        setError("An unknown error occurred")
+      }
     } finally {
       setLoading(false)
     }
@@ -60,14 +64,11 @@ export default function NewsCrud() {
       formData.set("image", imageRef.current.files[0])
     }
     try {
-      const response = await fetch("http://localhost:5000/api/news", {
-        method: "POST",
-        body: formData,
+      await axios.post("/news", formData, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem("admin_token") || ""}`
         }
       })
-      if (!response.ok) throw new Error("Failed to create news")
       setSuccess("News created successfully!")
       form.reset()
       if (imageRef.current) imageRef.current.value = ""
@@ -92,14 +93,11 @@ export default function NewsCrud() {
       formData.set("image", editImageRef.current.files[0])
     }
     try {
-      const response = await fetch(`http://localhost:5000/api/news/${editingId}`, {
-        method: "PUT",
-        body: formData,
+      await axios.put(`/news/${editingId}`, formData, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem("admin_token") || ""}`
         }
       })
-      if (!response.ok) throw new Error("Failed to update news")
       setSuccess("News updated!")
       setEditingId(null)
       setEditData({})
@@ -118,13 +116,11 @@ export default function NewsCrud() {
     setError("")
     setSuccess("")
     try {
-      const response = await fetch(`http://localhost:5000/api/news/${id}`, {
-        method: "DELETE",
+      await axios.delete(`/news/${id}`, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem("admin_token") || ""}`
         }
       })
-      if (!response.ok) throw new Error("Failed to delete news")
       setSuccess("News deleted!")
       fetchNews()
     } catch (err: any) {
@@ -241,9 +237,13 @@ export default function NewsCrud() {
             >
               {item.image && (
                 <div className="h-40 w-full overflow-hidden bg-gray-100">
-                  <img
+                  <Image
                     src={item.image}
                     alt={item.title}
+                    width={300}
+                    height={200}
+                    placeholder="blur"
+                    blurDataURL="/placeholder.png" // Optional placeholder
                     className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
                     loading="lazy"
                   />

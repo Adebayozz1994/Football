@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { Calendar, Tag, User, ArrowLeft, Clock, ChevronRight } from "lucide-react"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
+import axios from '@/utils/axios';
 
 interface NewsItem {
   _id: string
@@ -31,22 +32,25 @@ export default function PublicNewsList() {
   const gold = "#FFD700"
   const goldDark = "#BFA100"
 
+  // Fetch news using Axios
   useEffect(() => {
     const fetchNews = async () => {
-      setLoading(true)
-      setError("")
+      setLoading(true);
+      setError("");
       try {
-        const response = await fetch("http://localhost:5000/api/news")
-        if (!response.ok) throw new Error("Could not fetch news")
-        const data = await response.json()
-        setNews(data)
-      } catch (err: any) {
-        setError(err.message || "Failed to load news")
+        const res = await axios.get("/news");
+        setNews(res.data);
+      } catch (err) {
+        if (err instanceof Error) {
+          setError(err.message || "Failed to load news");
+        } else {
+          setError("An unknown error occurred");
+        }
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
-    }
-    fetchNews()
+    };
+    fetchNews();
   }, [])
 
   // --- Filtering ---

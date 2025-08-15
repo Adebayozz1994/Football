@@ -14,6 +14,7 @@ import { Trophy, Eye, EyeOff, Mail, Lock, ArrowRight, Facebook, Chrome } from "l
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { useToast } from "@/components/ui/use-toast"
+import axios from '@/utils/axios';
 
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
@@ -24,43 +25,37 @@ export default function LoginPage() {
   const { toast } = useToast()
   const router = useRouter()
 
-// 
-const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-  setIsLoading(true);
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
 
-  try {
-    const res = await fetch('http://localhost:5000/api/admin/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password })
-    });
-    const data = await res.json();
-    if (!res.ok) {
+    try {
+      const res = await axios.post('/admin/login', { email, password });
+      const data = res.data;
+      localStorage.setItem('admin_token', data.data.token);
       toast({
-        title: "Login Failed",
-        description: data.message || "Invalid email or password. Please try again.",
-        variant: "destructive",
+        title: "Login Successful",
+        description: "You have been successfully logged in.",
       });
+      router.push("/admin");
+    } catch (error) {
+      if (error instanceof Error) {
+        toast({
+          title: "Login Failed",
+          description: error.message || "Invalid email or password. Please try again.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Login Failed",
+          description: "An unknown error occurred. Please try again.",
+          variant: "destructive",
+        });
+      }
+    } finally {
       setIsLoading(false);
-      return;
     }
-    localStorage.setItem('admin_token', data.data.token);
-    toast({
-      title: "Login Successful",
-      description: "You have been successfully logged in.",
-    });
-    router.push("/admin");
-  } catch (error) {
-    toast({
-      title: "Login Failed",
-      description: "Invalid email or password. Please try again.",
-      variant: "destructive",
-    });
-  } finally {
-    setIsLoading(false);
-  }
-};
+  };
 
   const handleSocialLogin = async (provider: "google" | "facebook") => {
     setIsLoading(true)

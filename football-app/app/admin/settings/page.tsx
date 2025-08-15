@@ -14,6 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Separator } from "@/components/ui/separator"
 import { useToast } from "@/components/ui/use-toast"
 import { UploadCloud, Save, CheckCircle, KeyRound, RefreshCcw, Lock } from "lucide-react"
+import axios from '@/utils/axios';
 
 export default function AdminSettingsPage() {
   const { toast } = useToast()
@@ -28,21 +29,21 @@ export default function AdminSettingsPage() {
     maintenanceMode: false,
     allowRegistration: true,
     require2FA: false,
-    sessionTimeout: "3600", // seconds
+    sessionTimeout: "3600", 
     emailNotifications: true,
     pushNotifications: true,
     smsNotifications: false,
-    primaryColor: "#FFD700", // Gold
-    secondaryColor: "#1A1A1A", // Dark Gray
+    primaryColor: "#FFD700",
+    secondaryColor: "#1A1A1A",
     logoUrl: "/placeholder.svg?height=100&width=300",
     faviconUrl: "/placeholder.svg?height=32&width=32",
-    apiRateLimit: "1000", // requests per minute
-    fileUploadLimit: "50", // MB
+    apiRateLimit: "1000", 
+    fileUploadLimit: "50", 
     cachingEnabled: true,
     compressionEnabled: true,
     cdnEnabled: true,
     backupFrequency: "daily",
-    backupRetention: "7", // days
+    backupRetention: "7", 
   })
   const [isSaving, setIsSaving] = useState(false)
 
@@ -118,16 +119,13 @@ export default function AdminSettingsPage() {
     setIsChangeLoading(true)
     try {
       const token = typeof window !== "undefined" ? localStorage.getItem("admin_token") : null
-      const res = await fetch("http://localhost:5000/api/admin/change-password", {
-        method: "PUT",
+      const res = await axios.put('/admin/change-password', changePasswordForm, {
         headers: {
-          "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(changePasswordForm),
-      })
-      const data = await res.json()
-      if (!res.ok || !data.success) {
+      });
+      const data = res.data;
+      if (!data.success) {
         toast({
           title: "Change Password Failed",
           description: data.message,
@@ -141,27 +139,32 @@ export default function AdminSettingsPage() {
         })
         setChangePasswordForm({ currentPassword: "", newPassword: "" })
       }
-    } catch (error) {
-      toast({
-        title: "Change Password Failed",
-        description: "Server error while changing password.",
-        variant: "destructive",
-      })
+    } catch (err) {
+      if (err instanceof Error) {
+        toast({
+          title: "Change Password Failed",
+          description: err.message || "Server error while changing password.",
+          variant: "destructive",
+        })
+      } else {
+        toast({
+          title: "Change Password Failed",
+          description: "An unknown error occurred.",
+          variant: "destructive",
+        })
+      }
+    } finally {
+      setIsChangeLoading(false)
     }
-    setIsChangeLoading(false)
   }
 
   const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsForgotLoading(true)
     try {
-      const res = await fetch("http://localhost:5000/api/admin/forgot-password", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(forgotPasswordForm),
-      })
-      const data = await res.json()
-      if (!res.ok || !data.success) {
+      const res = await axios.post('/admin/forgot-password', forgotPasswordForm);
+      const data = res.data;
+      if (!data.success) {
         toast({
           title: "Forgot Password Failed",
           description: data.message,
@@ -175,39 +178,43 @@ export default function AdminSettingsPage() {
         })
         setForgotPasswordForm({ email: "" })
       }
-    } catch (error) {
-      toast({
-        title: "Forgot Password Failed",
-        description: "Server error while requesting password reset.",
-        variant: "destructive",
-      })
+    } catch (err) {
+      if (err instanceof Error) {
+        toast({
+          title: "Forgot Password Failed",
+          description: err.message || "Server error while requesting password reset.",
+          variant: "destructive",
+        })
+      } else {
+        toast({
+          title: "Forgot Password Failed",
+          description: "An unknown error occurred.",
+          variant: "destructive",
+        })
+      }
+    } finally {
+      setIsForgotLoading(false)
     }
-    setIsForgotLoading(false)
   }
 
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsResetLoading(true)
     try {
-      const res = await fetch("http://localhost:5000/api/admin/reset-password", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(resetPasswordForm),
-      })
-      const data = await res.json()
-      if (!res.ok || !data.success) {
+      const { data } = await axios.post("/admin/reset-password", resetPasswordForm);
+      if (!data.success) {
         toast({
           title: "Reset Password Failed",
           description: data.message,
           variant: "destructive",
-        })
+        });
       } else {
         toast({
           title: "Password Reset",
           description: "Your password has been reset successfully.",
           action: <CheckCircle className="text-green-500" />,
-        })
-        setResetPasswordForm({ token: "", newPassword: "" })
+        });
+        setResetPasswordForm({ token: "", newPassword: "" });
       }
     } catch (error) {
       toast({

@@ -1,4 +1,5 @@
 "use client"
+
 import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -7,6 +8,7 @@ import { Calendar, MapPin, Trophy, Users, Newspaper, Globe, Play, Star, Trending
 import Link from "next/link"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
+import axios from "@/utils/axios"
 
 interface Match {
   id: number | string
@@ -39,30 +41,36 @@ export default function HomePage() {
   const [loadingMatches, setLoadingMatches] = useState(true)
   const [loadingNews, setLoadingNews] = useState(true)
 
+  // Fetch Matches
   useEffect(() => {
     setLoadingMatches(true)
-    fetch("http://localhost:5000/api/matches?limit=3")
-      .then((res) => res.json())
-      .then((data) => {
-        const matches: Match[] = Array.isArray(data) ? data : []
-        const sorted = [
-          ...matches.filter(m => m.status === "live"),
-          ...matches.filter(m => m.status === "scheduled"),
-          ...matches.filter(m => m.status === "finished"),
-        ]
-        setFeaturedMatches(sorted.slice(0, 3)) 
+    axios
+      .get("/matches?limit=3")
+      .then((response) => {
+        const data = response.data
+        if (Array.isArray(data)) {
+          const sorted = [
+            ...data.filter(m => m.status === "live"),
+            ...data.filter(m => m.status === "scheduled"),
+            ...data.filter(m => m.status === "finished"),
+          ]
+          setFeaturedMatches(sorted.slice(0, 3))
+        }
         setLoadingMatches(false)
       })
       .catch(() => setLoadingMatches(false))
   }, [])
 
+  // Fetch News
   useEffect(() => {
     setLoadingNews(true)
-    fetch("http://localhost:5000/api/news?limit=3")
-      .then((res) => res.json())
-      .then((data) => {
-        const limitedNews = Array.isArray(data) ? data.slice(0, 3) : []
-        setLatestNews(limitedNews)
+    axios
+      .get("/news?limit=3")
+      .then((response) => {
+        const data = response.data
+        if (Array.isArray(data)) {
+          setLatestNews(data.slice(0, 3))
+        }
         setLoadingNews(false)
       })
       .catch(() => setLoadingNews(false))
@@ -81,7 +89,7 @@ export default function HomePage() {
 
       {/* Hero Section */}
       <section className="relative py-24 px-4 overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-r from-black via-gray-900 to-black"></div>
+        <div className="absolute inset-0 bg-gradient-to-r from-black via-gray-900 to-black" />
         <div className="relative container mx-auto text-center">
           <div className="inline-flex items-center px-4 py-2 rounded-full bg-yellow-400/10 border border-yellow-400/20 mb-8">
             <Star className="h-4 w-4 text-yellow-400 mr-2" />
@@ -93,8 +101,8 @@ export default function HomePage() {
             <span className="text-white">Hub</span>
           </h1>
           <p className="text-xl md:text-2xl mb-12 max-w-4xl mx-auto text-gray-300 leading-relaxed">
-            Experience the ultimate destination for Nigerian local football and European leagues coverage with real-time
-            updates, comprehensive statistics, and premium content.
+            Experience the ultimate destination for Nigerian local football and European leagues coverage with
+            real-time updates, comprehensive statistics, and premium content.
           </p>
           <div className="flex flex-col sm:flex-row gap-6 justify-center">
             <Button size="lg" className="btn-gold text-lg px-8 py-4" asChild>
@@ -142,14 +150,15 @@ export default function HomePage() {
               <Link href="/matches">View All Matches</Link>
             </Button>
           </div>
+
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
             {loadingMatches ? (
               <div className="col-span-full text-center text-gray-300">Loading matches...</div>
             ) : featuredMatches.length === 0 ? (
               <div className="col-span-full text-center text-gray-300">No matches found.</div>
             ) : (
-              featuredMatches.map((match) => (
-                <Card key={match.id ?? `${match.homeTeam}-${match.awayTeam}-${match.date}-${match.time}`} className="card-black-gold hover:scale-105 transition-all duration-300">
+              featuredMatches.map((match, index) => (
+                <Card key={match.id || `match-${index}`} className="card-black-gold hover:scale-105 transition-all duration-300">
                   <CardHeader>
                     <div className="flex items-center justify-between">
                       <Badge
@@ -164,8 +173,8 @@ export default function HomePage() {
                       >
                         {match.status === "live" ? (
                           <div className="flex items-center">
-                            <div className="live-indicator w-2 h-2 mr-2"></div>
-                            LIVE {match.minute ? match.minute + "'" : ""}
+                            <div className="live-indicator w-2 h-2 mr-2" />
+                            LIVE {match.minute ? `${match.minute}'` : ""}
                           </div>
                         ) : match.status === "scheduled" ? (
                           "SCHEDULED"
@@ -173,16 +182,18 @@ export default function HomePage() {
                           "FINISHED"
                         )}
                       </Badge>
-                      <div className="flex items-center text-sm text-yellow-400">
-                        <MapPin className="h-4 w-4 mr-1" />
-                        {match.state}
-                      </div>
+                      {match.state && (
+                        <div className="flex items-center text-sm text-yellow-400">
+                          <MapPin className="h-4 w-4 mr-1" />
+                          {match.state}
+                        </div>
+                      )}
                     </div>
                   </CardHeader>
                   <CardContent>
                     <div className="text-center mb-6">
                       <div className="flex items-center justify-between mb-4">
-                        <div className="text-center flex-1">
+                        <div className="flex-1 text-center">
                           <div className="font-semibold text-white text-lg">{match.homeTeam}</div>
                         </div>
                         <div className="text-4xl font-bold mx-6 text-yellow-400">
@@ -190,7 +201,7 @@ export default function HomePage() {
                             ? `${match.homeScore ?? "-"}-${match.awayScore ?? "-"}`
                             : "VS"}
                         </div>
-                        <div className="text-center flex-1">
+                        <div className="flex-1 text-center">
                           <div className="font-semibold text-white text-lg">{match.awayTeam}</div>
                         </div>
                       </div>
@@ -203,7 +214,7 @@ export default function HomePage() {
                         <Clock className="h-4 w-4 ml-4 mr-2" />
                         {match.time}
                       </div>
-                      <div className="text-center text-xs">{match.venue}</div>
+                      {match.venue && <div className="text-center text-xs">{match.venue}</div>}
                     </div>
 
                     <Button className="w-full btn-gold">
@@ -235,11 +246,8 @@ export default function HomePage() {
             ) : latestNews.length === 0 ? (
               <div className="col-span-full text-center text-gray-300">No news found.</div>
             ) : (
-              latestNews.map((article) => (
-                <Card
-                  key={article.id ?? `${article.title}-${article.date}`}
-                  className="card-black-gold hover:scale-105 transition-all duration-300"
-                >
+              latestNews.map((article, index) => (
+                <Card key={article.id || `article-${index}`} className="card-black-gold hover:scale-105 transition-all duration-300">
                   <div className="aspect-video relative overflow-hidden rounded-t-lg">
                     <img
                       src={article.image || "/placeholder.svg"}
@@ -249,7 +257,7 @@ export default function HomePage() {
                     {article.featured && (
                       <Badge className="absolute top-4 left-4 bg-yellow-400 text-black">Featured</Badge>
                     )}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div>
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
                   </div>
                   <CardHeader>
                     <div className="flex items-center justify-between mb-3">
@@ -287,28 +295,28 @@ export default function HomePage() {
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
             {[
               {
-                id: 'local-matches',
+                id: "local-matches",
                 title: "Local Matches",
                 description: "Browse matches from all 36 Nigerian states + FCT",
                 icon: Trophy,
                 href: "/matches",
               },
               {
-                id: 'teams',
+                id: "teams",
                 title: "Teams",
                 description: "Explore team profiles, stats, and fixtures",
                 icon: Users,
                 href: "/teams",
               },
               {
-                id: 'european-football',
+                id: "european-football",
                 title: "European Football",
                 description: "Live scores and news from top European leagues",
                 icon: Globe,
                 href: "/europe",
               },
               {
-                id: 'news-updates',
+                id: "news-updates",
                 title: "News & Updates",
                 description: "Latest football news and match reports",
                 icon: Newspaper,

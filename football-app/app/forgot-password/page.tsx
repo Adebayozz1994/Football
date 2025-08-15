@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { useState } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
@@ -11,6 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Trophy, Mail, ArrowLeft, ArrowRight } from "lucide-react"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
+import axios from '@/utils/axios';
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("")
@@ -21,12 +21,15 @@ export default function ForgotPasswordPage() {
     e.preventDefault()
     setIsLoading(true)
 
-    // Simulate API call
-    setTimeout(() => {
-      setIsLoading(false)
-      setIsSubmitted(true)
-      console.log("Password reset request for:", email)
-    }, 2000)
+    try {
+      await axios.post('/user/forgot-password', { email });
+      setIsSubmitted(true);
+      console.log("Password reset request for:", email);
+    } catch (err) {
+      console.error("Error sending reset instructions:", err);
+    } finally {
+      setIsLoading(false);
+    }
   }
 
   return (

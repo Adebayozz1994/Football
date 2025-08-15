@@ -1,0 +1,33 @@
+{
+  "name": "Football Hub",
+  "short_name": "FootballApp",
+  "description": "Enjoy your local match live score !",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#FFD700",
+  "icons": [
+    {
+      "src": "/icons/icon-192x192.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "/icons/icon-512x512.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/screenshots/screenshot.png",
+      "type": "image/png",
+      "sizes": "1080x1920"
+    },
+    {
+      "src": "/screenshots/screenshot.png",
+      "type": "image/png",
+      "sizes": "1080x1920"
+    }
+  ]
+}

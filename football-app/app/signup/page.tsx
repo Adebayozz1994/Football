@@ -15,6 +15,7 @@ import { Trophy, Eye, EyeOff, Mail, Lock, User, MapPin, ArrowRight, Facebook, Ch
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { useToast } from "@/components/ui/use-toast"
+import axios from "@/utils/axios"
 
 export default function SignupPage() {
   const [showPassword, setShowPassword] = useState(false)
@@ -119,29 +120,16 @@ export default function SignupPage() {
     setIsLoading(true)
 
     try {
-      const res = await fetch('http://localhost:5000/api/user/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          firstName: formData.firstName,
-          lastName: formData.lastName,
-          email: formData.email,
-          password: formData.password,
-          phone: formData.phone,
-          favoriteState: formData.favoriteState,
-          favoriteTeam: formData.favoriteTeam
-        })
+      const { data } = await axios.post("/api/user/register", {
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        email: formData.email,
+        password: formData.password,
+        phone: formData.phone,
+        favoriteState: formData.favoriteState,
+        favoriteTeam: formData.favoriteTeam,
       });
-      const data = await res.json();
-      if (!res.ok) {
-        toast({
-          title: "Signup Failed",
-          description: data.message || "An error occurred during signup.",
-          variant: "destructive",
-        });
-        setIsLoading(false);
-        return;
-      }
+
       toast({
         title: "Account Created!",
         description: "Your account has been created successfully.",

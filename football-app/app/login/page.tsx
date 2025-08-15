@@ -14,6 +14,7 @@ import { Trophy, Eye, EyeOff, Mail, Lock, ArrowRight, Facebook, Chrome } from "l
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { useToast } from "@/components/ui/use-toast"
+import axios from '@/utils/axios';
 
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
@@ -29,21 +30,8 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      const res = await fetch('http://localhost:5000/api/user/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        toast({
-          title: "Login Failed",
-          description: data.message || "Invalid email or password. Please try again.",
-          variant: "destructive",
-        });
-        setIsLoading(false);
-        return;
-      }
+      const res = await axios.post('/user/login', { email, password });
+      const data = res.data;
       // Save token (JWT) in localStorage (or cookie if you want)
       localStorage.setItem('token', data.data.token);
       toast({
@@ -51,12 +39,20 @@ export default function LoginPage() {
         description: "You have been successfully logged in.",
       });
       router.push("/");
-    } catch (error) {
-      toast({
-        title: "Login Failed",
-        description: "Invalid email or password. Please try again.",
-        variant: "destructive",
-      });
+    } catch (err) {
+      if (err instanceof Error) {
+        toast({
+          title: "Login Failed",
+          description: err.message || "Invalid email or password. Please try again.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Login Failed",
+          description: "An unknown error occurred. Please try again.",
+          variant: "destructive",
+        });
+      }
     } finally {
       setIsLoading(false);
     }

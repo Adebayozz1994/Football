@@ -372,49 +372,6 @@ const resetPassword = async (req, res) => {
   }
 }
 
-// const updateAdminPicture = async (req, res) => {
-//   try {
-//     const updateData = { ...req.body, profileUpdatedAt: new Date() };
-
-//     // Handle avatar upload (if there is a file)
-//     if (req.file) {
-//       // Upload buffer to Cloudinary
-//       const streamUpload = (fileBuffer) => {
-//         return new Promise((resolve, reject) => {
-//           const stream = cloudinary.uploader.upload_stream(
-//             { folder: 'avatars' },
-//             (error, result) => {
-//               if (result) resolve(result);
-//               else reject(error);
-//             }
-//           );
-//           streamifier.createReadStream(fileBuffer).pipe(stream);
-//         });
-//       };
-
-//       const result = await streamUpload(req.file.buffer);
-//       updateData.avatar = result.secure_url; // Save Cloudinary image URL
-//     }
-
-//     const admin = await Admin.findByIdAndUpdate(
-//       req.admin._id,
-//       updateData,
-//       { new: true, runValidators: true }
-//     ).select('-password');
-
-//     res.json({
-//       success: true,
-//       message: 'Profile updated successfully',
-//       data: { admin }
-//     });
-//   } catch (error) {
-//     console.error('Update admin profile error:', error);
-//     res.status(500).json({
-//       success: false,
-//       message: 'Server error while updating admin profile'
-//     });
-//   }
-// };
 
 module.exports = {
   register,

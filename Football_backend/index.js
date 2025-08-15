@@ -6,17 +6,14 @@ const { WebSocketServer, WebSocket } = require('ws');
 require('dotenv').config();
 const jwt = require('jsonwebtoken');
 
-// Import models to register them with Mongoose
+
 require('./models/User');
 require('./models/Admin');
-require('./models/Team');
-require('./models/Player');
 require('./models/Match');
 require('./models/News');
 
 const userRoutes = require('./routes/user.routes');
 const adminRoutes = require('./routes/admin.routes'); 
-// const adminRoutes = require('./routes/admin.routes');
 const matchRoutes = require('./routes/match.routes'); 
 const newsRoutes = require('./routes/news.routes'); 
 
@@ -55,7 +52,6 @@ app.get('/', (req, res) => {
 
 app.use('/api/user', userRoutes); 
 app.use('/api/admin', adminRoutes); 
-// app.use('/api/admin', adminRoutes); 
 app.use('/api/matches', matchRoutes); 
 app.use('/api/news', newsRoutes);
 
