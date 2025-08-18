@@ -281,7 +281,7 @@ const forgotPassword = async (req, res) => {
     await admin.save();
 
     // Send reset email
-    const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/admin/reset-password?token=${resetToken}`;
+    const resetUrl = `${process.env.FRONTEND_URL || 'https://football-eight-theta.vercel.app/'}/admin/reset-password?token=${resetToken}`;
     const transporter = nodemailer.createTransport({
       service: "gmail",
       auth: {

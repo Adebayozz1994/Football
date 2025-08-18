@@ -26,7 +26,6 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning className="dark">
       <head>
         {/* Preload hero image for better LCP */}
-        <link rel="preload" as="image" href="/hero.webp" />
           <link rel="manifest" href="/manifest.json" />
           <meta name="theme-color" content="#000000" />
           <link rel="apple-touch-icon" href="/icon-192x192.png" />
@@ -41,9 +40,6 @@ export default function RootLayout({
           {children}
           <Toaster />
         </ThemeProvider>
-
-        {/* Lazy load analytics / non-critical scripts */}
-        <Script src="/non-critical.js" strategy="lazyOnload" />
       </body>
     </html>
   );

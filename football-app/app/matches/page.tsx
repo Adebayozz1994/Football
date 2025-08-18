@@ -296,7 +296,7 @@ export default function MatchesPage() {
 
       try {
         //  WebSocket connection
-        ws = new WebSocket('ws://localhost:5000/ws/matches');
+        ws = new WebSocket('ws://https://football-7jrz.onrender.com/ws/matches');
         
         ws.onopen = () => {
           console.log('WebSocket Connected');

@@ -29,7 +29,7 @@ mongoose
 
 
   app.use(cors({
-    origin: ['http://localhost:3000','http://localhost:3001'],
+    origin: ['http://localhost:3000','https://football-eight-theta.vercel.app/'],
     credentials: true,
   }));
 app.use(express.urlencoded({ extended: true }));
