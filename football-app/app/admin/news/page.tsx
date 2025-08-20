@@ -12,6 +12,10 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+import { 
+  AdminFormSkeleton, 
+  AdminTableSkeleton 
+} from "@/components/ui/skeletons"
 
 interface NewsItem {
   _id: string
@@ -221,9 +225,17 @@ export default function NewsCrud() {
 
   return (
     <div className="max-w-6xl mx-auto mt-8 p-4 bg-white rounded shadow">
-      <h2 className="text-xl font-semibold mb-4">Create News</h2>
-      {/* Create form */}
-      <form onSubmit={handleSubmit} encType="multipart/form-data" className="space-y-4">
+      {loading && !news.length ? (
+        // Skeleton Loading State for initial load
+        <>
+          <AdminFormSkeleton />
+          <AdminTableSkeleton />
+        </>
+      ) : (
+        <>
+          <h2 className="text-xl font-semibold mb-4">Create News</h2>
+          {/* Create form */}
+          <form onSubmit={handleSubmit} encType="multipart/form-data" className="space-y-4">
         <input name="title" className="w-full border px-2 py-1 rounded" placeholder="Title" required />
         <select name="category" className="w-full border px-2 py-1 rounded" required>
           <option value="">Choose Category</option>
@@ -431,6 +443,8 @@ export default function NewsCrud() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      </>
+      )}
     </div>
   )
 }

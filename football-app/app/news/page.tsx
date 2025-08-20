@@ -5,6 +5,11 @@ import { Calendar, Tag, User, ArrowLeft, Clock, ChevronRight } from "lucide-reac
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import axios from '@/utils/axios';
+import { 
+  NewsCardSkeleton, 
+  FilterSkeleton, 
+  PageHeaderSkeleton 
+} from "@/components/ui/skeletons"
 
 const NIGERIAN_STATES = [
   "Abia", "Adamawa", "Akwa Ibom", "Anambra", "Bauchi", "Bayelsa", "Benue", "Borno",
@@ -270,11 +275,10 @@ export default function PublicNewsList() {
           </div>
 
           {loading && (
-            <div className="flex justify-center items-center min-h-[200px]">
-              <div
-                style={{ borderColor: gold, borderTopColor: "transparent" }}
-                className="animate-spin rounded-full h-16 w-16 border-4"
-              ></div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <NewsCardSkeleton key={i} />
+              ))}
             </div>
           )}
 

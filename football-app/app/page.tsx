@@ -9,6 +9,11 @@ import Link from "next/link"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import axios from "@/utils/axios"
+import { 
+  MatchCardSkeleton, 
+  NewsCardSkeleton, 
+  PageHeaderSkeleton 
+} from "@/components/ui/skeletons"
 
 interface Match {
   id: number | string
@@ -153,7 +158,9 @@ export default function HomePage() {
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
             {loadingMatches ? (
-              <div className="col-span-full text-center text-gray-300">Loading matches...</div>
+              Array.from({ length: 3 }).map((_, i) => (
+                <MatchCardSkeleton key={i} />
+              ))
             ) : featuredMatches.length === 0 ? (
               <div className="col-span-full text-center text-gray-300">No matches found.</div>
             ) : (
@@ -242,7 +249,9 @@ export default function HomePage() {
           </div>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
             {loadingNews ? (
-              <div className="col-span-full text-center text-gray-300">Loading news...</div>
+              Array.from({ length: 3 }).map((_, i) => (
+                <NewsCardSkeleton key={i} />
+              ))
             ) : latestNews.length === 0 ? (
               <div className="col-span-full text-center text-gray-300">No news found.</div>
             ) : (

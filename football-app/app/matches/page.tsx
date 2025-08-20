@@ -11,6 +11,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Calendar, MapPin, Clock, Search, Filter, Eye, Trophy } from "lucide-react"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
+import { 
+  MatchCardSkeleton, 
+  FilterSkeleton, 
+  PageHeaderSkeleton, 
+  TabsSkeleton 
+} from "@/components/ui/skeletons"
 
 // Types
 interface MatchEvent {
@@ -534,14 +540,32 @@ export default function MatchesPage() {
     <div className="min-h-screen bg-gradient-black">
       <Header />
       <div className="container mx-auto px-4 py-12">
-        <div className="text-center mb-12">
-          <h1 className="text-5xl font-bold mb-4 text-white font-playfair">
-            <span className="text-gradient-gold">Football</span> Matches
-          </h1>
-          <p className="text-xl text-gray-400 max-w-3xl mx-auto">
-            Follow all live matches, upcoming fixtures, and results from Nigerian local leagues across all 36 states.
-          </p>
-        </div>
+        {loading ? (
+          // Skeleton Loading State
+          <>
+            <PageHeaderSkeleton />
+            <div className="mb-12">
+              <FilterSkeleton />
+            </div>
+            <div className="space-y-8">
+              <TabsSkeleton />
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <MatchCardSkeleton key={i} />
+                ))}
+              </div>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="text-center mb-12">
+              <h1 className="text-5xl font-bold mb-4 text-white font-playfair">
+                <span className="text-gradient-gold">Football</span> Matches
+              </h1>
+              <p className="text-xl text-gray-400 max-w-3xl mx-auto">
+                Follow all live matches, upcoming fixtures, and results from Nigerian local leagues across all 36 states.
+              </p>
+            </div>
         <div className="mb-12">
           <Card className="card-black-gold">
             <CardContent className="p-6">
@@ -761,6 +785,8 @@ export default function MatchesPage() {
             Load More Matches
           </Button>
         </div>
+        </>
+        )}
       </div>
       <Footer />
       {selectedMatch && (

@@ -8,6 +8,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
+import { 
+  AdminFormSkeleton, 
+  AdminTableSkeleton 
+} from "@/components/ui/skeletons"
 
 type Match = {
   _id: string
@@ -275,9 +279,20 @@ export default function MatchesPage() {
 
   return (
     <div className="container max-w-5xl py-6 space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold">Match Management</h1>
-      </div>
+      {loading && !matches.length ? (
+        // Skeleton Loading State for initial load
+        <>
+          <div className="flex justify-between items-center">
+            <div className="h-9 w-48 bg-gray-700 rounded animate-pulse"></div>
+          </div>
+          <AdminFormSkeleton />
+          <AdminTableSkeleton />
+        </>
+      ) : (
+        <>
+          <div className="flex justify-between items-center">
+            <h1 className="text-3xl font-bold">Match Management</h1>
+          </div>
 
       <Card>
         <CardHeader>
@@ -572,6 +587,8 @@ export default function MatchesPage() {
             </div>
           </CardContent>
         </Card>
+      )}
+        </>
       )}
     </div>
   )
