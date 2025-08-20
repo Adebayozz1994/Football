@@ -1,5 +1,18 @@
 const mongoose = require("mongoose");
 
+const NIGERIAN_STATES = [
+  "Abia", "Adamawa", "Akwa Ibom", "Anambra", "Bauchi", "Bayelsa", "Benue",
+  "Borno", "Cross River", "Delta", "Ebonyi", "Edo", "Ekiti", "Enugu", "FCT",
+  "Gombe", "Imo", "Jigawa", "Kaduna", "Kano", "Katsina", "Kebbi", "Kogi",
+  "Kwara", "Lagos", "Nasarawa", "Niger", "Ogun", "Ondo", "Osun", "Oyo",
+  "Plateau", "Rivers", "Sokoto", "Taraba", "Yobe", "Zamfara"
+];
+
+const COMPETITIONS = [
+  "NPFL", "NNL", "NLO", "State League", "FA Cup", "League Cup", 
+  "Super Cup", "Youth League", "Women's League", "Amateur League"
+];
+
 // Football event schema
 const eventSchema = new mongoose.Schema({
   minute: { 
@@ -29,6 +42,17 @@ const matchSchema = new mongoose.Schema({
     type: String,
     enum: ["scheduled", "live", "finished"],
     default: "scheduled"
+  },
+  state: {
+    type: String,
+    enum: NIGERIAN_STATES,
+    required: true
+  },
+  competition: {
+    type: String,
+    enum: COMPETITIONS,
+    required: true,
+    default: "NPFL"
   },
   matchDate: { type: Date, required: true },
   matchTime: { type: String }, 

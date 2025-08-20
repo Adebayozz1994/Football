@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
+
 type Match = {
   _id: string
   homeTeam: string
@@ -15,6 +16,8 @@ type Match = {
   homeScore: number
   awayScore: number
   status: string
+  state: string
+  competition: string
   matchDate: string
   matchTime?: string
   venue?: string
@@ -26,6 +29,20 @@ type Match = {
     description?: string
   }[]
 }
+
+// All Nigerian states
+const NIGERIAN_STATES = [
+  "Abia", "Adamawa", "Akwa Ibom", "Anambra", "Bauchi", "Bayelsa", "Benue", "Borno",
+  "Cross River", "Delta", "Ebonyi", "Edo", "Ekiti", "Enugu", "FCT", "Gombe", "Imo",
+  "Jigawa", "Kaduna", "Kano", "Katsina", "Kebbi", "Kogi", "Kwara", "Lagos", "Nasarawa",
+  "Niger", "Ogun", "Ondo", "Osun", "Oyo", "Plateau", "Rivers", "Sokoto", "Taraba",
+  "Yobe", "Zamfara"
+]
+
+const COMPETITIONS = [
+  "NPFL", "NNL", "NLO", "State League", "FA Cup", "League Cup", 
+  "Super Cup", "Youth League", "Women's League", "Amateur League"
+]
 
 // Helper to get token from localStorage
 const getToken = () => {
@@ -44,7 +61,9 @@ export default function MatchesPage() {
     awayTeam: "",
     matchDate: "",
     matchTime: "",
-    venue: ""
+    venue: "",
+    state: "Oyo",
+    competition: "NPFL"
   })
   const [selectedMatch, setSelectedMatch] = useState<Match | null>(null)
   const [eventForm, setEventForm] = useState({
@@ -91,7 +110,7 @@ export default function MatchesPage() {
           Authorization: `Bearer ${token}`
         }
       })
-      setForm({ homeTeam: "", awayTeam: "", matchDate: "", matchTime: "", venue: "" })
+      setForm({ homeTeam: "", awayTeam: "", matchDate: "", matchTime: "", venue: "", state: "Oyo", competition: "NPFL" })
       fetchMatches()
     } catch (err: any) {
       setError(err.response?.data?.message || "Error creating match")
@@ -142,14 +161,13 @@ export default function MatchesPage() {
           headers: {
             Authorization: `Bearer ${token}`
           },
-          timeout: 5000, // 5 second timeout
+          timeout: 5000,
           validateStatus: function (status) {
-            return status >= 200 && status < 500; // Handle only 5xx errors as errors
+            return status >= 200 && status < 500;
           }
         }
       )
       
-      // Refresh match data after successful update
       await selectMatch(id)
       await fetchMatches()
     } catch (err: any) {
@@ -167,12 +185,9 @@ export default function MatchesPage() {
         setError("Admin token is required")
         return
       }
-      
-      // Match the backend route endpoints exactly
       const endpoint = status === "live" ? "live" : 
                       status === "scheduled" ? "schedule" : 
                       "finish";
-      
       await axios.patch(`/matches/${id}/${endpoint}`, {}, {
         headers: {
           Authorization: `Bearer ${token}`
@@ -300,6 +315,34 @@ export default function MatchesPage() {
                 value={form.venue}
                 onChange={e => setForm({ ...form, venue: e.target.value })}
               />
+              <Select
+                value={form.state}
+                onValueChange={value => setForm({ ...form, state: value })}
+                required
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select State" />
+                </SelectTrigger>
+                <SelectContent>
+                  {NIGERIAN_STATES.map(state => (
+                    <SelectItem key={state} value={state}>{state}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select
+                value={form.competition}
+                onValueChange={value => setForm({ ...form, competition: value })}
+                required
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select Competition" />
+                </SelectTrigger>
+                <SelectContent>
+                  {COMPETITIONS.map(competition => (
+                    <SelectItem key={competition} value={competition}>{competition}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <Button type="submit" className="w-full md:w-auto">Create Match</Button>
           </form>
@@ -307,7 +350,7 @@ export default function MatchesPage() {
       </Card>
 
       {error && <div className="bg-destructive/15 text-destructive p-3 rounded-md">{error}</div>}
-      
+
       <Card>
         <CardHeader>
           <CardTitle>All Matches</CardTitle>
@@ -331,8 +374,12 @@ export default function MatchesPage() {
                       }>
                         {match.status}
                       </Badge>
+                      <Badge variant="outline" className="bg-green-50 text-green-700">
+                        {match.state}
+                      </Badge>
                       <span>{match.matchDate?.slice(0,10)} {match.matchTime}</span>
                       {match.venue && <span>• {match.venue}</span>}
+                      <span>• {match.competition}</span>
                     </div>
                   </div>
                   <div className="space-x-2">
@@ -374,8 +421,12 @@ export default function MatchesPage() {
                 }>
                   {selectedMatch.status}
                 </Badge>
+                <Badge variant="outline" className="bg-green-50 text-green-700">
+                  {selectedMatch.state}
+                </Badge>
                 <span>{selectedMatch.matchDate?.slice(0,10)} {selectedMatch.matchTime}</span>
                 {selectedMatch.venue && <span>• {selectedMatch.venue}</span>}
+                <span>• {selectedMatch.competition}</span>
               </div>
             </div>
 

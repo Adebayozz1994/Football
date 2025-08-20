@@ -11,6 +11,7 @@ interface Match {
   homeTeam: string
   awayTeam: string
   state: string
+  competition: string
   status: "live" | "upcoming" | "finished"
   score?: string
   time?: string
@@ -151,13 +152,15 @@ export default function AdminDashboard() {
                     <Badge variant={match.status === "live" ? "destructive" : "secondary"}>
                       {match.status.toUpperCase()}
                     </Badge>
+                    <Badge variant="outline" className="bg-green-50 text-green-700 text-xs">
+                      {match.state}
+                    </Badge>
                     <div>
                       <div className="font-medium">
                         {match.homeTeam} vs {match.awayTeam}
                       </div>
-                      <div className="text-sm text-muted-foreground flex items-center">
-                        <MapPin className="h-3 w-3 mr-1" />
-                        {match.state}
+                      <div className="text-sm text-muted-foreground">
+                        {match.competition}
                       </div>
                     </div>
                   </div>

@@ -1,6 +1,19 @@
 const Match = require("../models/Match");
 const { broadcastMatchUpdate } = require("../index");
 
+const NIGERIAN_STATES = [
+  "Abia", "Adamawa", "Akwa Ibom", "Anambra", "Bauchi", "Bayelsa", "Benue",
+  "Borno", "Cross River", "Delta", "Ebonyi", "Edo", "Ekiti", "Enugu", "FCT",
+  "Gombe", "Imo", "Jigawa", "Kaduna", "Kano", "Katsina", "Kebbi", "Kogi",
+  "Kwara", "Lagos", "Nasarawa", "Niger", "Ogun", "Ondo", "Osun", "Oyo",
+  "Plateau", "Rivers", "Sokoto", "Taraba", "Yobe", "Zamfara"
+];
+
+const COMPETITIONS = [
+  "NPFL", "NNL", "NLO", "State League", "FA Cup", "League Cup", 
+  "Super Cup", "Youth League", "Women's League", "Amateur League"
+];
+
 // Helper: valid event types
 const validEventTypes = [
   "goal", "yellow_card", "red_card", "substitution",
@@ -10,11 +23,17 @@ const validEventTypes = [
 // CREATE a new match
 const createMatch = async (req, res) => {
   try {
-    const { homeTeam, awayTeam, matchDate, matchTime, venue } = req.body;
-    if (!homeTeam || !awayTeam || !matchDate) {
-      return res.status(400).json({ message: "Home team, away team, and match date are required" });
+    const { homeTeam, awayTeam, matchDate, matchTime, venue, state, competition } = req.body;
+    if (!homeTeam || !awayTeam || !matchDate || !state) {
+      return res.status(400).json({ message: "Home team, away team, match date, and state are required" });
     }
-    const match = new Match({ homeTeam, awayTeam, matchDate, matchTime, venue });
+    if (!NIGERIAN_STATES.includes(state)) {
+      return res.status(400).json({ message: "Invalid Nigerian state" });
+    }
+    if (competition && !COMPETITIONS.includes(competition)) {
+      return res.status(400).json({ message: "Invalid competition" });
+    }
+    const match = new Match({ homeTeam, awayTeam, matchDate, matchTime, venue, state, competition: competition || "NPFL" });
     await match.save();
     res.status(201).json(match);
   } catch (error) {
@@ -27,6 +46,9 @@ const updateMatch = async (req, res) => {
   try {
     const { id } = req.params;
     const updateFields = req.body;
+    if (updateFields.state && !NIGERIAN_STATES.includes(updateFields.state)) {
+      return res.status(400).json({ message: "Invalid Nigerian state" });
+    }
     const match = await Match.findByIdAndUpdate(id, updateFields, { new: true, runValidators: true });
     if (!match) return res.status(404).json({ message: "Match not found" });
     
@@ -258,11 +280,32 @@ const markLive = async (req, res) => {
 // GET all matches (with filtering and pagination)
 const getAllMatches = async (req, res) => {
   try {
-    const { status, homeTeam, awayTeam, page = 1, limit = 20 } = req.query;
+    const { status, state, competition, homeTeam, awayTeam, search, page = 1, limit = 20 } = req.query;
     let filter = {};
+    
+    // Filter by status
     if (status) filter.status = status;
+    
+    // Filter by state
+    if (state) filter.state = state;
+    
+    // Filter by competition
+    if (competition) filter.competition = competition;
+    
+    // Filter by team names
     if (homeTeam) filter.homeTeam = new RegExp(homeTeam, 'i');
     if (awayTeam) filter.awayTeam = new RegExp(awayTeam, 'i');
+    
+    // Search functionality
+    if (search) {
+      filter.$or = [
+        { homeTeam: new RegExp(search, 'i') },
+        { awayTeam: new RegExp(search, 'i') },
+        { venue: new RegExp(search, 'i') },
+        { competition: new RegExp(search, 'i') }
+      ];
+    }
+    
     const matches = await Match.find(filter)
       .sort({ matchDate: -1 })
       .skip((page - 1) * parseInt(limit))
@@ -295,6 +338,24 @@ const deleteMatch = async (req, res) => {
   }
 };
 
+// GET all competitions
+const getCompetitions = async (req, res) => {
+  try {
+    res.json(COMPETITIONS);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// GET all states
+const getStates = async (req, res) => {
+  try {
+    res.json(NIGERIAN_STATES);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 module.exports = {
   createMatch,
   updateMatch,
@@ -306,6 +367,7 @@ module.exports = {
   markLive,
   getAllMatches,
   getMatchById,
-  
-  deleteMatch
+  deleteMatch,
+  getCompetitions,
+  getStates
 };

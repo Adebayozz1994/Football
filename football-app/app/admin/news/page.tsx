@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import Image from "next/image"
 import axios from "@/utils/axios"
 
 interface NewsItem {
@@ -28,6 +27,21 @@ export default function NewsCrud() {
   const editImageRef = useRef<HTMLInputElement>(null)
   const [filterCategory, setFilterCategory] = useState<string>("all")
   const [filterDate, setFilterDate] = useState<string>("")
+  const [imagePreview, setImagePreview] = useState<string>("")
+  
+  // Handle image preview
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        setImagePreview(e.target?.result as string)
+      }
+      reader.readAsDataURL(file)
+    } else {
+      setImagePreview("")
+    }
+  }
   
   // Fetch all news (no filter in backend, fetch all for UI filtering)
   const fetchNews = async () => {
@@ -53,28 +67,48 @@ export default function NewsCrud() {
   }, [])
 
   // Create news
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     setLoading(true)
     setError("")
     setSuccess("")
     const form = e.currentTarget
     const formData = new FormData(form)
-    if (imageRef.current?.files?.[0]) {
-      formData.set("image", imageRef.current.files[0])
+    
+    console.log("Form data before adding image:");
+    for (let [key, value] of formData.entries()) {
+      console.log(key, value);
     }
+    
+    if (imageRef.current?.files?.[0]) {
+      console.log("Adding image file:", imageRef.current.files[0]);
+      formData.set("image", imageRef.current.files[0])
+    } else {
+      console.log("No image file selected");
+    }
+    
+    console.log("Final form data:");
+    for (let [key, value] of formData.entries()) {
+      console.log(key, value);
+    }
+    
     try {
-      await axios.post("/news", formData, {
+      const response = await axios.post("/news", formData, {
         headers: {
-          Authorization: `Bearer ${localStorage.getItem("admin_token") || ""}`
-        }
+          Authorization: `Bearer ${localStorage.getItem("admin_token") || ""}`,
+        },
       })
+      console.log("News created:", response.data);
       setSuccess("News created successfully!")
       form.reset()
       if (imageRef.current) imageRef.current.value = ""
-      fetchNews()
+      setImagePreview("") // Clear image preview
+      
+      // Add the new news item to the current list instead of refetching
+      setNews(prevNews => [response.data, ...prevNews])
     } catch (err: any) {
-      setError(err.message || "Error occurred")
+      console.error("Error creating news:", err);
+      setError(err.response?.data?.message || err.message || "Error occurred")
     } finally {
       setLoading(false)
     }
@@ -163,13 +197,36 @@ export default function NewsCrud() {
         <input name="author" className="w-full border px-2 py-1 rounded" placeholder="Author" required />
         <textarea name="description" className="w-full border px-2 py-1 rounded" placeholder="Description" required />
         <input name="date" type="date" className="w-full border px-2 py-1 rounded" />
-        <input name="image" type="file" accept="image/*" ref={imageRef} className="w-full" />
+        <div>
+          <input 
+            name="image" 
+            type="file" 
+            accept="image/*" 
+            ref={imageRef} 
+            className="w-full" 
+            onChange={handleImageChange}
+          />
+          {imagePreview && (
+            <div className="mt-2">
+              <img 
+                src={imagePreview} 
+                alt="Preview" 
+                className="max-w-xs max-h-32 object-cover rounded border"
+              />
+            </div>
+          )}
+        </div>
         <button
           type="submit"
-          className="bg-blue-600 text-white px-4 py-2 rounded w-full"
+          className="bg-blue-600 text-white px-4 py-2 rounded w-full disabled:opacity-50"
           disabled={loading}
         >
-          {loading ? "Creating..." : "Create News"}
+          {loading ? (
+            <div className="flex items-center justify-center">
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+              Uploading image and creating news...
+            </div>
+          ) : "Create News"}
         </button>
         {error && <div className="text-red-600 mt-2">{error}</div>}
         {success && <div className="text-green-600 mt-2">{success}</div>}
@@ -237,13 +294,9 @@ export default function NewsCrud() {
             >
               {item.image && (
                 <div className="h-40 w-full overflow-hidden bg-gray-100">
-                  <Image
+                  <img
                     src={item.image}
                     alt={item.title}
-                    width={300}
-                    height={200}
-                    placeholder="blur"
-                    blurDataURL="/placeholder.png" // Optional placeholder
                     className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
                     loading="lazy"
                   />

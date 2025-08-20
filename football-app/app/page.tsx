@@ -306,7 +306,7 @@ export default function HomePage() {
                 title: "Teams",
                 description: "Explore team profiles, stats, and fixtures",
                 icon: Users,
-                href: "/teams",
+                href: "/",
               },
               {
                 id: "european-football",

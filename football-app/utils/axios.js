@@ -1,10 +1,7 @@
 import axios from 'axios';
 
 const instance = axios.create({
-  baseURL: 'https://football-7jrz.onrender.com/api',
-  headers: {
-    'Content-Type': 'application/json',
-  },
+  baseURL: 'http://localhost:5000/api',
 });
 
 // Add a request interceptor
@@ -14,6 +11,12 @@ instance.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+    
+    // Don't set Content-Type for FormData, let browser handle it
+    if (!(config.data instanceof FormData)) {
+      config.headers['Content-Type'] = 'application/json';
+    }
+    
     return config;
   },
   (error) => {

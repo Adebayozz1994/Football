@@ -15,7 +15,12 @@ const createNews = async (req, res) => {
             resource_type: "image",
             folder: "news",
             format: "webp", 
-            quality: "auto", 
+            quality: "auto:good",
+            width: 800,
+            height: 600,
+            crop: "limit",
+            fetch_format: "auto",
+            flags: "progressive"
           },
           (error, result) => {
             if (error) return reject(error);

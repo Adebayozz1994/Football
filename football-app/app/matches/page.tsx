@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Calendar, MapPin, Clock, Search, Filter, Eye, Users, Trophy } from "lucide-react"
+import { Calendar, MapPin, Clock, Search, Filter, Eye, Trophy } from "lucide-react"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 
@@ -42,12 +42,27 @@ interface Match {
     description: string
     timestamp: number
   }
+  state: string
+  competition: string
 }
 
-// Match Details Modal Component
+// Nigerian states
+const nigerianStates = [
+  "Abia", "Adamawa", "Akwa Ibom", "Anambra", "Bauchi", "Bayelsa", "Benue", "Borno",
+  "Cross River", "Delta", "Ebonyi", "Edo", "Ekiti", "Enugu", "FCT", "Gombe", "Imo",
+  "Jigawa", "Kaduna", "Kano", "Katsina", "Kebbi", "Kogi", "Kwara", "Lagos", "Nasarawa",
+  "Niger", "Ogun", "Ondo", "Osun", "Oyo", "Plateau", "Rivers", "Sokoto", "Taraba",
+  "Yobe", "Zamfara"
+]
+
+const competitions = [
+  "NPFL", "NNL", "NLO", "State League", "FA Cup", "League Cup", 
+  "Super Cup", "Youth League", "Women's League", "Amateur League"
+]
+
+// Match Details Modal Component (unchanged, as in your code)
 const MatchDetailsModal = ({ match, onClose }: { match: Match | null; onClose: () => void }) => {
   if (!match) return null;
-
   const getEventIcon = (type: MatchEvent['type']) => {
     switch (type) {
       case 'goal':
@@ -68,7 +83,6 @@ const MatchDetailsModal = ({ match, onClose }: { match: Match | null; onClose: (
         return '•'
     }
   }
-
   return (
     <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div className="bg-gradient-to-b from-black to-zinc-900 border-2 border-gold-400/30 rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-xl shadow-gold-400/10">
@@ -105,7 +119,6 @@ const MatchDetailsModal = ({ match, onClose }: { match: Match | null; onClose: (
               ✕
             </Button>
           </div>
-
           <div className="mb-8">
             <div className="text-center space-y-4">
               <div className="flex items-center justify-between">
@@ -161,7 +174,6 @@ const MatchDetailsModal = ({ match, onClose }: { match: Match | null; onClose: (
               </div>
             </div>
           </div>
-
           {match.events && match.events.length > 0 ? (
             <div className="space-y-4">
               <h3 className="text-lg font-semibold text-gold-400 mb-4 border-b border-gold-400/30 pb-2">Match Events</h3>
@@ -204,35 +216,29 @@ export default function MatchesPage() {
   const [updating, setUpdating] = useState(false)
   const [error, setError] = useState("")
   const [searchTerm, setSearchTerm] = useState("")
-  const [selectedState, setSelectedState] = useState("all")
+  const [selectedStatus, setSelectedStatus] = useState("all")
+  const [selectedState, setSelectedState] = useState("Oyo")
+  const [selectedCompetition, setSelectedCompetition] = useState("all")
   const [selectedDate, setSelectedDate] = useState("all")
   const [selectedMatch, setSelectedMatch] = useState<Match | null>(null)
 
+  // Fetch matches
   const fetchMatches = async (isPolling = false) => {
-    if (isPolling) {
-      setUpdating(true);
-    }
+    if (isPolling) setUpdating(true)
     try {
-      const params = new URLSearchParams();
-      if (selectedDate !== 'all') {
-        params.append('dateFilter', selectedDate);
-      }
-      if (selectedState !== 'all') {
-        params.append('status', selectedState);
-      }
-      if (searchTerm) {
-        params.append('search', searchTerm);
-      }
-
-      const response = await axios.get(`/matches?${params.toString()}`);
-      const newMatches = response.data as Match[];
-
+      const params = new URLSearchParams()
+      if (selectedDate !== 'all') params.append('dateFilter', selectedDate)
+      if (selectedState && selectedState !== 'all') params.append('state', selectedState)
+      if (selectedCompetition && selectedCompetition !== 'all') params.append('competition', selectedCompetition)
+      if (selectedStatus && selectedStatus !== 'all') params.append('status', selectedStatus)
+      if (searchTerm) params.append('search', searchTerm)
+      const response = await axios.get(`/matches?${params.toString()}`)
+      const newMatches = response.data as Match[]
       const updatedMatches: Match[] = newMatches.map((newMatch: Match) => {
-        const oldMatch = matches.find(m => m._id === newMatch._id);
+        const oldMatch = matches.find(m => m._id === newMatch._id)
         if (oldMatch && newMatch.status === "live") {
           const scoreChange = newMatch.homeScore !== oldMatch.homeScore || 
                             newMatch.awayScore !== oldMatch.awayScore;
-
           if (scoreChange) {
             return {
               ...oldMatch,
@@ -245,63 +251,49 @@ export default function MatchesPage() {
           }
         }
         return newMatch;
-      });
-
-      setMatches(updatedMatches);
-      setError("");
-
+      })
+      setMatches(updatedMatches)
+      setError("")
       setTimeout(() => {
         setMatches(prev => 
           prev.map(match => {
-            const newMatch = newMatches.find(m => m._id === match._id);
+            const newMatch = newMatches.find(m => m._id === match._id)
             if (newMatch && match.bigChance) {
               return {
                 ...newMatch,
                 bigChance: undefined
-              };
+              }
             }
-            return match;
+            return match
           })
-        );
-      }, 5000);
+        )
+      }, 5000)
     } catch (err) {
-      if (err instanceof Error) {
-        setError(err.message || "Failed to load matches");
-      } else {
-        setError("An unknown error occurred");
-      }
-      console.error("Error fetching matches:", err);
+      if (err instanceof Error) setError(err.message || "Failed to load matches")
+      else setError("An unknown error occurred")
+      console.error("Error fetching matches:", err)
     } finally {
-      setLoading(false);
-      if (isPolling) {
-        setUpdating(false);
-      }
+      setLoading(false)
+      if (isPolling) setUpdating(false)
     }
   }
 
-  // Initial fetch
+  // Initial fetch and any filter change
   useEffect(() => {
     fetchMatches()
-  }, [])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedState, selectedCompetition, selectedStatus, selectedDate, searchTerm])
 
   useEffect(() => {
     const hasLiveMatches = matches.some(match => match.status === "live")
-    
     if (hasLiveMatches) {
       const fastPollInterval = setInterval(() => {
         fetchMatches(true)
       }, 5000)
-
-      let ws: WebSocket | null = null;
-
+      let ws: WebSocket | null = null
       try {
-        //  WebSocket connection
-        ws = new WebSocket('ws://https://football-7jrz.onrender.com/ws/matches');
-        
-        ws.onopen = () => {
-          console.log('WebSocket Connected');
-        };
-
+        ws = new WebSocket('ws://https://football-7jrz.onrender.com/ws/matches')
+        ws.onopen = () => { console.log('WebSocket Connected') }
         ws.onmessage = (event) => {
           try {
             const data = JSON.parse(event.data) as {
@@ -309,8 +301,7 @@ export default function MatchesPage() {
               matchId: string;
               team: "home" | "away";
               update?: Partial<Match>;
-            };
-            
+            }
             if (data.type === 'score_update') {
               setMatches(prev => prev.map(match => {
                 if (match._id === data.matchId) {
@@ -321,11 +312,10 @@ export default function MatchesPage() {
                       description: "Potential goal!",
                       timestamp: Date.now()
                     }
-                  };
+                  }
                 }
-                return match;
-              }));
-
+                return match
+              }))
               setTimeout(() => {
                 setMatches(prev => prev.map(match => {
                   if (match._id === data.matchId) {
@@ -333,37 +323,33 @@ export default function MatchesPage() {
                       ...match,
                       ...data.update,
                       bigChance: undefined
-                    };
+                    }
                   }
-                  return match;
-                }));
-              }, 3000);
+                  return match
+                }))
+              }, 3000)
             }
           } catch (err) {
-            console.log('Error processing WebSocket message:', err);
+            console.log('Error processing WebSocket message:', err)
           }
-        };
-
-        ws.onerror = () => {
-          console.log('WebSocket connection failed, falling back to polling');
-          ws = null;
-        };
-
-        ws.onclose = () => {
-          console.log('WebSocket connection closed');
-          ws = null;
-        };
-      } catch (err) {
-        console.log('WebSocket setup failed, using polling instead');
-      }
-
-      return () => {
-        clearInterval(fastPollInterval);
-        if (ws) {
-          ws.close();
         }
-      };
+        ws.onerror = () => {
+          console.log('WebSocket connection failed, falling back to polling')
+          ws = null
+        }
+        ws.onclose = () => {
+          console.log('WebSocket connection closed')
+          ws = null
+        }
+      } catch (err) {
+        console.log('WebSocket setup failed, using polling instead')
+      }
+      return () => {
+        clearInterval(fastPollInterval)
+        if (ws) ws.close()
+      }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [matches])
 
   if (loading) {
@@ -387,31 +373,20 @@ export default function MatchesPage() {
     const matchesSearch =
       match.homeTeam.toLowerCase().includes(searchTerm.toLowerCase()) ||
       match.awayTeam.toLowerCase().includes(searchTerm.toLowerCase())
-
-    // Filter by status
-    const matchesStatus = selectedState === "all" || match.status === selectedState
-
-    // Filter by date
+    const matchesStatus = selectedStatus === "all" || match.status === selectedStatus
     let matchesDate = true
     if (selectedDate !== "all") {
-      // Ensure proper date parsing by converting YYYY-MM-DD to Date object
       const [year, month, day] = match.matchDate.split('-').map(num => parseInt(num))
       const matchDate = new Date(year, month - 1, day)
-      
       const today = new Date()
       today.setHours(0, 0, 0, 0)
-
       const tomorrow = new Date(today)
       tomorrow.setDate(tomorrow.getDate() + 1)
-
       const weekEnd = new Date(today)
       weekEnd.setDate(weekEnd.getDate() + 7)
-
-      // Format dates for comparison
       const matchDateStr = matchDate.toISOString().split('T')[0]
       const todayStr = today.toISOString().split('T')[0]
       const tomorrowStr = tomorrow.toISOString().split('T')[0]
-
       switch (selectedDate) {
         case "today":
           matchesDate = matchDateStr === todayStr
@@ -426,57 +401,15 @@ export default function MatchesPage() {
           matchesDate = true
       }
     }
-
     return matchesSearch && matchesStatus && matchesDate
   }).sort((a, b) => {
-    // Custom sorting order: live -> scheduled -> finished
-    const statusOrder = { live: 0, scheduled: 1, finished: 2 };
-    return statusOrder[a.status] - statusOrder[b.status];
+    const statusOrder = { live: 0, scheduled: 1, finished: 2 }
+    return statusOrder[a.status] - statusOrder[b.status]
   })
 
   const liveMatches = filteredMatches.filter((match) => match.status === "live")
   const upcomingMatches = filteredMatches.filter((match) => match.status === "scheduled")
   const finishedMatches = filteredMatches.filter((match) => match.status === "finished")
-
-  const nigerianStates = [
-    "Abia",
-    "Adamawa",
-    "Akwa Ibom",
-    "Anambra",
-    "Bauchi",
-    "Bayelsa",
-    "Benue",
-    "Borno",
-    "Cross River",
-    "Delta",
-    "Ebonyi",
-    "Edo",
-    "Ekiti",
-    "Enugu",
-    "FCT",
-    "Gombe",
-    "Imo",
-    "Jigawa",
-    "Kaduna",
-    "Kano",
-    "Katsina",
-    "Kebbi",
-    "Kogi",
-    "Kwara",
-    "Lagos",
-    "Nasarawa",
-    "Niger",
-    "Ogun",
-    "Ondo",
-    "Osun",
-    "Oyo",
-    "Plateau",
-    "Rivers",
-    "Sokoto",
-    "Taraba",
-    "Yobe",
-    "Zamfara",
-  ]
 
   const MatchCard = ({ match }: { match: Match }) => (
     <Card 
@@ -484,27 +417,32 @@ export default function MatchesPage() {
       onClick={() => setSelectedMatch(match)}>
       <CardHeader>
         <div className="flex items-center justify-between">
-          <Badge
-            variant={match.status === "live" ? "destructive" : match.status === "scheduled" ? "secondary" : "outline"}
-            className={`${match.status === "live" ? "animate-pulse-gold" : ""} ${
-              match.status === "live"
-                ? "bg-red-500 text-white"
-                : match.status === "scheduled"
-                  ? "bg-gold-400 text-black-900"
-                  : "bg-green-600 text-white"
-            }`}
-          >
-            {match.status === "live" ? (
-              <div className="flex items-center">
-                <div className="live-indicator w-2 h-2 mr-2"></div>
-                Live
-              </div>
-            ) : match.status === "scheduled" ? (
-              "UPCOMING"
-            ) : (
-              "FINISHED"
-            )}
-          </Badge>
+          <div className="flex gap-2">
+            <Badge
+              variant={match.status === "live" ? "destructive" : match.status === "scheduled" ? "secondary" : "outline"}
+              className={`${match.status === "live" ? "animate-pulse-gold" : ""} ${
+                match.status === "live"
+                  ? "bg-red-500 text-white"
+                  : match.status === "scheduled"
+                    ? "bg-gold-400 text-black-900"
+                    : "bg-green-600 text-white"
+              }`}
+            >
+              {match.status === "live" ? (
+                <div className="flex items-center">
+                  <div className="live-indicator w-2 h-2 mr-2"></div>
+                  Live
+                </div>
+              ) : match.status === "scheduled" ? (
+                "UPCOMING"
+              ) : (
+                "FINISHED"
+              )}
+            </Badge>
+            <Badge variant="outline" className="bg-green-500/20 text-green-300 border-green-400">
+              {match.state}
+            </Badge>
+          </div>
           {match.venue && (
             <div className="flex items-center text-sm text-gold-400">
               <MapPin className="h-4 w-4 mr-1" />
@@ -552,7 +490,6 @@ export default function MatchesPage() {
             </div>
           </div>
         </div>
-
         <div className="space-y-3 text-sm text-gray-400 mb-6">
           <div className="flex items-center justify-center">
             <Calendar className="h-4 w-4 mr-2 text-gold-400" />
@@ -564,9 +501,13 @@ export default function MatchesPage() {
               </>
             )}
           </div>
+          <div className="text-center">
+            <Badge variant="outline" className="bg-blue-500/20 text-blue-300 border-blue-400">
+              {match.competition}
+            </Badge>
+          </div>
           {match.venue && <div className="text-center font-medium text-gold-400">{match.venue}</div>}
         </div>
-
         <div className="flex gap-2">
           <Button className="flex-1 btn-gold">
             {match.status === "live" ? "Watch Live" : match.status === "scheduled" ? "Get Tickets" : "Match Report"}
@@ -582,23 +523,18 @@ export default function MatchesPage() {
   return (
     <div className="min-h-screen bg-gradient-black">
       <Header />
-
       <div className="container mx-auto px-4 py-12">
         <div className="text-center mb-12">
           <h1 className="text-5xl font-bold mb-4 text-white font-playfair">
             <span className="text-gradient-gold">Football</span> Matches
           </h1>
           <p className="text-xl text-gray-400 max-w-3xl mx-auto">
-            Follow all live matches, upcoming fixtures, and results from Nigerian local leagues across all 36 states +
-            OGBOMOSO
+            Follow all live matches, upcoming fixtures, and results from Nigerian local leagues across all 36 states.
           </p>
         </div>
-
         <div className="mb-12">
           <Card className="card-black-gold">
-
             <CardContent className="p-6">
-
               <div className="flex flex-col lg:flex-row gap-4">
                 <div className="relative flex-1">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gold-400" />
@@ -610,6 +546,36 @@ export default function MatchesPage() {
                   />
                 </div>
                 <Select value={selectedState} onValueChange={setSelectedState}>
+                  <SelectTrigger className="w-full lg:w-48 bg-black-800 border-gold-400/30 text-white">
+                    <SelectValue placeholder="Select State" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-black-800 border-gold-400/20 max-h-96 overflow-y-auto">
+                    {nigerianStates.map(state => (
+                      <SelectItem key={state} value={state} className="text-gold-400">
+                        {state}
+                      </SelectItem>
+                    ))}
+                    <SelectItem value="all" className="text-gold-400">
+                      All States
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select value={selectedCompetition} onValueChange={setSelectedCompetition}>
+                  <SelectTrigger className="w-full lg:w-48 bg-black-800 border-gold-400/30 text-white">
+                    <SelectValue placeholder="Select Competition" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-black-800 border-gold-400/20 max-h-96 overflow-y-auto">
+                    {competitions.map(competition => (
+                      <SelectItem key={competition} value={competition} className="text-gold-400">
+                        {competition}
+                      </SelectItem>
+                    ))}
+                    <SelectItem value="all" className="text-gold-400">
+                      All Competitions
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select value={selectedStatus} onValueChange={setSelectedStatus}>
                   <SelectTrigger className="w-full lg:w-48 bg-black-800 border-gold-400/30 text-white">
                     <SelectValue placeholder="Select Status" />
                   </SelectTrigger>
@@ -628,36 +594,14 @@ export default function MatchesPage() {
                     </SelectItem>
                   </SelectContent>
                 </Select>
-                <Select value={selectedDate} onValueChange={setSelectedDate}>
-                  <SelectTrigger className="w-full lg:w-48 bg-black-800 border-gold-400/30 text-white">
-                    <SelectValue placeholder="Select Date" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-black-800 border-gold-400/20">
-                    <SelectItem value="all" className="text-gold-400">
-                      All Dates
-                    </SelectItem>
-                    <SelectItem value="today" className="text-gold-400">
-                      Today
-                    </SelectItem>
-                    <SelectItem value="tomorrow" className="text-gold-400">
-                      Tomorrow
-                    </SelectItem>
-                    <SelectItem value="week" className="text-gold-400">
-                      This Week
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-                <Button className="btn-gold">
+                <Button className="btn-gold" onClick={() => fetchMatches()}>
                   <Filter className="h-4 w-4 mr-2" />
                   Filter
                 </Button>
               </div>
-
             </CardContent>
-            
           </Card>
         </div>
-
         {updating && (
           <div className="text-center mb-4">
             <span className="inline-flex items-center text-sm text-gold-400">
@@ -687,7 +631,6 @@ export default function MatchesPage() {
               Finished ({finishedMatches.length})
             </TabsTrigger>
           </TabsList>
-
           <TabsContent value="all">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {filteredMatches.map((match) => (
@@ -695,7 +638,6 @@ export default function MatchesPage() {
               ))}
             </div>
           </TabsContent>
-
           <TabsContent value="live">
             {liveMatches.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -713,7 +655,6 @@ export default function MatchesPage() {
               </Card>
             )}
           </TabsContent>
-
           <TabsContent value="upcoming">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {upcomingMatches.map((match) => (
@@ -721,7 +662,6 @@ export default function MatchesPage() {
               ))}
             </div>
           </TabsContent>
-
           <TabsContent value="finished">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {finishedMatches.map((match) => (
@@ -730,7 +670,6 @@ export default function MatchesPage() {
             </div>
           </TabsContent>
         </Tabs>
-
         {/* Load More */}
         <div className="text-center mt-16">
           <Button size="lg" className="btn-black px-12">
@@ -738,9 +677,7 @@ export default function MatchesPage() {
           </Button>
         </div>
       </div>
-
       <Footer />
-      
       {selectedMatch && (
         <MatchDetailsModal 
           match={selectedMatch} 

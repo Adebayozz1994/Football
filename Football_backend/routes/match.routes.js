@@ -5,6 +5,8 @@ const { authenticateToken } = require('../middlewares/adminAuth');
 
 // Public routes
 router.get('/', matchController.getAllMatches); 
+router.get('/competitions', matchController.getCompetitions);
+router.get('/states', matchController.getStates);
 router.get('/:id', matchController.getMatchById);
 
 // Protected routes (admin only)
