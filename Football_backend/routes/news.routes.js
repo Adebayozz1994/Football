@@ -6,6 +6,7 @@ const upload = require('../middlewares/uploads');
 
 // Public routes
 router.get('/', newsController.getAllNews);
+router.get('/states', newsController.getStates);
 router.get('/:id', newsController.getNewsById);
 
 // Protected routes (admin only)

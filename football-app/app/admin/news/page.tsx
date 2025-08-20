@@ -2,6 +2,16 @@
 
 import { useState, useEffect, useRef } from "react"
 import axios from "@/utils/axios"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 
 interface NewsItem {
   _id: string
@@ -10,11 +20,20 @@ interface NewsItem {
   author: string
   description: string
   date: string
+  state: string
   image?: string
   createdAt?: string
 }
 
 const categories = ["News", "Transfer", "Match", "Injury", "Analysis", "Rumor", "Other"]
+
+const NIGERIAN_STATES = [
+  "Abia", "Adamawa", "Akwa Ibom", "Anambra", "Bauchi", "Bayelsa", "Benue",
+  "Borno", "Cross River", "Delta", "Ebonyi", "Edo", "Ekiti", "Enugu", "FCT",
+  "Gombe", "Imo", "Jigawa", "Kaduna", "Kano", "Katsina", "Kebbi", "Kogi",
+  "Kwara", "Lagos", "Nasarawa", "Niger", "Ogun", "Ondo", "Osun", "Oyo",
+  "Plateau", "Rivers", "Sokoto", "Taraba", "Yobe", "Zamfara"
+]
 
 export default function NewsCrud() {
   const [news, setNews] = useState<NewsItem[]>([])
@@ -27,7 +46,10 @@ export default function NewsCrud() {
   const editImageRef = useRef<HTMLInputElement>(null)
   const [filterCategory, setFilterCategory] = useState<string>("all")
   const [filterDate, setFilterDate] = useState<string>("")
+  const [filterState, setFilterState] = useState<string>("all")
   const [imagePreview, setImagePreview] = useState<string>("")
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [deleteId, setDeleteId] = useState<string | null>(null)
   
   // Handle image preview
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -145,12 +167,17 @@ export default function NewsCrud() {
 
   // Delete news
   const handleDelete = async (id: string) => {
-    if (!window.confirm("Delete this news?")) return
+    setDeleteId(id)
+    setShowDeleteConfirm(true)
+  }
+
+  const confirmDelete = async () => {
+    if (!deleteId) return
     setLoading(true)
     setError("")
     setSuccess("")
     try {
-      await axios.delete(`/news/${id}`, {
+      await axios.delete(`/news/${deleteId}`, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem("admin_token") || ""}`
         }
@@ -161,7 +188,14 @@ export default function NewsCrud() {
       setError(err.message || "Error occurred")
     } finally {
       setLoading(false)
+      setShowDeleteConfirm(false)
+      setDeleteId(null)
     }
+  }
+
+  const cancelDelete = () => {
+    setShowDeleteConfirm(false)
+    setDeleteId(null)
   }
 
   // Set up edit form
@@ -181,7 +215,8 @@ export default function NewsCrud() {
   const filteredNews = news.filter(item => {
     const matchesCategory = filterCategory === "all" || item.category === filterCategory
     const matchesDate = !filterDate || item.date?.slice(0, 10) === filterDate
-    return matchesCategory && matchesDate
+    const matchesState = filterState === "all" || item.state === filterState
+    return matchesCategory && matchesDate && matchesState
   })
 
   return (
@@ -193,6 +228,10 @@ export default function NewsCrud() {
         <select name="category" className="w-full border px-2 py-1 rounded" required>
           <option value="">Choose Category</option>
           {categories.map(c => (<option value={c} key={c}>{c}</option>))}
+        </select>
+        <select name="state" className="w-full border px-2 py-1 rounded" required>
+          <option value="">Choose State</option>
+          {NIGERIAN_STATES.map(state => (<option value={state} key={state}>{state}</option>))}
         </select>
         <input name="author" className="w-full border px-2 py-1 rounded" placeholder="Author" required />
         <textarea name="description" className="w-full border px-2 py-1 rounded" placeholder="Description" required />
@@ -237,22 +276,30 @@ export default function NewsCrud() {
         <select
           value={filterCategory}
           onChange={e => setFilterCategory(e.target.value)}
-          className="border px-2 py-1 rounded w-full md:w-1/2"
+          className="border px-2 py-1 rounded w-full md:w-1/3"
         >
           <option value="all">All Categories</option>
           {categories.map(c => (<option value={c} key={c}>{c}</option>))}
+        </select>
+        <select
+          value={filterState}
+          onChange={e => setFilterState(e.target.value)}
+          className="border px-2 py-1 rounded w-full md:w-1/3"
+        >
+          <option value="all">All States</option>
+          {NIGERIAN_STATES.map(state => (<option value={state} key={state}>{state}</option>))}
         </select>
         <input
           type="date"
           value={filterDate}
           onChange={e => setFilterDate(e.target.value)}
-          className="border px-2 py-1 rounded w-full md:w-1/2"
+          className="border px-2 py-1 rounded w-full md:w-1/3"
           placeholder="Filter by date"
         />
-        {(filterCategory !== "all" || filterDate) && (
+        {(filterCategory !== "all" || filterDate || filterState !== "all") && (
           <button
             type="button"
-            onClick={() => { setFilterCategory("all"); setFilterDate(""); }}
+            onClick={() => { setFilterCategory("all"); setFilterDate(""); setFilterState("all"); }}
             className="bg-gray-200 px-4 py-2 rounded text-sm"
           >
             Reset Filters
@@ -273,6 +320,9 @@ export default function NewsCrud() {
               <input name="title" className="w-full border px-2 py-1 rounded" defaultValue={editData.title} required />
               <select name="category" className="w-full border px-2 py-1 rounded" defaultValue={editData.category} required>
                 {categories.map(c => (<option value={c} key={c}>{c}</option>))}
+              </select>
+              <select name="state" className="w-full border px-2 py-1 rounded" defaultValue={editData.state} required>
+                {NIGERIAN_STATES.map(state => (<option value={state} key={state}>{state}</option>))}
               </select>
               <input name="author" className="w-full border px-2 py-1 rounded" defaultValue={editData.author} required />
               <textarea name="description" className="w-full border px-2 py-1 rounded" defaultValue={editData.description} required />
@@ -305,6 +355,7 @@ export default function NewsCrud() {
               <div className="flex-1 flex flex-col p-4">
                 <div className="flex items-center gap-2 mb-2">
                   <span className="bg-blue-100 text-blue-600 text-xs px-2 py-1 rounded font-semibold uppercase">{item.category}</span>
+                  <span className="bg-green-100 text-green-600 text-xs px-2 py-1 rounded font-semibold">{item.state}</span>
                   <span className="text-xs text-gray-500 ml-auto">{item.date?.slice(0, 10)}</span>
                 </div>
                 <h3 className="font-bold text-lg mb-1 truncate">{item.title}</h3>
@@ -356,6 +407,30 @@ export default function NewsCrud() {
           )
         ))}
       </div>
+
+      {/* Delete Confirmation Modal */}
+      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm Delete</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this news article? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={cancelDelete} disabled={loading}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmDelete} 
+              disabled={loading}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {loading ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

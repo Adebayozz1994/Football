@@ -416,7 +416,7 @@ export default function MatchesPage() {
       className="card-black-gold hover:scale-105 transition-all duration-300 group cursor-pointer"
       onClick={() => setSelectedMatch(match)}>
       <CardHeader>
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between mb-2">
           <div className="flex gap-2">
             <Badge
               variant={match.status === "live" ? "destructive" : match.status === "scheduled" ? "secondary" : "outline"}
@@ -439,9 +439,6 @@ export default function MatchesPage() {
                 "FINISHED"
               )}
             </Badge>
-            <Badge variant="outline" className="bg-green-500/20 text-green-300 border-green-400">
-              {match.state}
-            </Badge>
           </div>
           {match.venue && (
             <div className="flex items-center text-sm text-gold-400">
@@ -449,6 +446,24 @@ export default function MatchesPage() {
               {match.venue}
             </div>
           )}
+        </div>
+        
+        {/* Enhanced State and Competition Badges */}
+        <div className="flex flex-wrap gap-3 justify-center">
+          <Badge 
+            variant="outline" 
+            className="bg-gold-400/20 text-gold-400 border-gold-400 px-3 py-1 text-sm font-semibold flex items-center"
+          >
+            <MapPin className="h-4 w-4 mr-1" />
+            {match.state}
+          </Badge>
+          <Badge 
+            variant="outline" 
+            className="bg-blue-500/20 text-blue-300 border-blue-400 px-3 py-1 text-sm font-semibold flex items-center"
+          >
+            <Trophy className="h-4 w-4 mr-1" />
+            {match.competition}
+          </Badge>
         </div>
       </CardHeader>
       <CardContent>
@@ -501,11 +516,6 @@ export default function MatchesPage() {
               </>
             )}
           </div>
-          <div className="text-center">
-            <Badge variant="outline" className="bg-blue-500/20 text-blue-300 border-blue-400">
-              {match.competition}
-            </Badge>
-          </div>
           {match.venue && <div className="text-center font-medium text-gold-400">{match.venue}</div>}
         </div>
         <div className="flex gap-2">
@@ -546,33 +556,39 @@ export default function MatchesPage() {
                   />
                 </div>
                 <Select value={selectedState} onValueChange={setSelectedState}>
-                  <SelectTrigger className="w-full lg:w-48 bg-black-800 border-gold-400/30 text-white">
-                    <SelectValue placeholder="Select State" />
+                  <SelectTrigger className="w-full lg:w-52 bg-black-800 border-gold-400/30 text-white">
+                    <div className="flex items-center">
+                      <MapPin className="h-4 w-4 mr-2 text-gold-400" />
+                      <SelectValue placeholder="🌍 Select State" />
+                    </div>
                   </SelectTrigger>
                   <SelectContent className="bg-black-800 border-gold-400/20 max-h-96 overflow-y-auto">
+                    <SelectItem value="all" className="text-gold-400 font-semibold">
+                      🌍 All States
+                    </SelectItem>
                     {nigerianStates.map(state => (
                       <SelectItem key={state} value={state} className="text-gold-400">
-                        {state}
+                        📍 {state}
                       </SelectItem>
                     ))}
-                    <SelectItem value="all" className="text-gold-400">
-                      All States
-                    </SelectItem>
                   </SelectContent>
                 </Select>
                 <Select value={selectedCompetition} onValueChange={setSelectedCompetition}>
-                  <SelectTrigger className="w-full lg:w-48 bg-black-800 border-gold-400/30 text-white">
-                    <SelectValue placeholder="Select Competition" />
+                  <SelectTrigger className="w-full lg:w-52 bg-black-800 border-gold-400/30 text-white">
+                    <div className="flex items-center">
+                      <Trophy className="h-4 w-4 mr-2 text-blue-400" />
+                      <SelectValue placeholder="🏆 Select Competition" />
+                    </div>
                   </SelectTrigger>
                   <SelectContent className="bg-black-800 border-gold-400/20 max-h-96 overflow-y-auto">
+                    <SelectItem value="all" className="text-blue-400 font-semibold">
+                      🏆 All Competitions
+                    </SelectItem>
                     {competitions.map(competition => (
-                      <SelectItem key={competition} value={competition} className="text-gold-400">
-                        {competition}
+                      <SelectItem key={competition} value={competition} className="text-blue-400">
+                        🏅 {competition}
                       </SelectItem>
                     ))}
-                    <SelectItem value="all" className="text-gold-400">
-                      All Competitions
-                    </SelectItem>
                   </SelectContent>
                 </Select>
                 <Select value={selectedStatus} onValueChange={setSelectedStatus}>
@@ -599,6 +615,75 @@ export default function MatchesPage() {
                   Filter
                 </Button>
               </div>
+              
+              {/* Active Filters Display */}
+              {(selectedState !== 'all' || selectedCompetition !== 'all' || selectedStatus !== 'all' || searchTerm) && (
+                <div className="mt-4 pt-4 border-t border-gold-400/20">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-sm text-gold-400 font-medium">Active Filters:</span>
+                    {selectedState !== 'all' && (
+                      <Badge className="bg-gold-400/20 text-gold-400 border-gold-400 flex items-center">
+                        <MapPin className="h-3 w-3 mr-1" />
+                        {selectedState}
+                        <button 
+                          onClick={() => setSelectedState('all')}
+                          className="ml-2 hover:text-red-400"
+                        >
+                          ×
+                        </button>
+                      </Badge>
+                    )}
+                    {selectedCompetition !== 'all' && (
+                      <Badge className="bg-blue-500/20 text-blue-300 border-blue-400 flex items-center">
+                        <Trophy className="h-3 w-3 mr-1" />
+                        {selectedCompetition}
+                        <button 
+                          onClick={() => setSelectedCompetition('all')}
+                          className="ml-2 hover:text-red-400"
+                        >
+                          ×
+                        </button>
+                      </Badge>
+                    )}
+                    {selectedStatus !== 'all' && (
+                      <Badge className="bg-purple-500/20 text-purple-300 border-purple-400 flex items-center">
+                        Status: {selectedStatus}
+                        <button 
+                          onClick={() => setSelectedStatus('all')}
+                          className="ml-2 hover:text-red-400"
+                        >
+                          ×
+                        </button>
+                      </Badge>
+                    )}
+                    {searchTerm && (
+                      <Badge className="bg-green-500/20 text-green-300 border-green-400 flex items-center">
+                        <Search className="h-3 w-3 mr-1" />
+                        "{searchTerm}"
+                        <button 
+                          onClick={() => setSearchTerm('')}
+                          className="ml-2 hover:text-red-400"
+                        >
+                          ×
+                        </button>
+                      </Badge>
+                    )}
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => {
+                        setSelectedState('all')
+                        setSelectedCompetition('all')
+                        setSelectedStatus('all')
+                        setSearchTerm('')
+                      }}
+                      className="text-red-400 border-red-400 hover:bg-red-400/10"
+                    >
+                      Clear All
+                    </Button>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>

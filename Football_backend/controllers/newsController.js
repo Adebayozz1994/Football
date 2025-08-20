@@ -2,10 +2,24 @@ const News = require("../models/News");
 const cloudinary = require("../utils/cloudinary");
 const streamifier = require("streamifier");
 
+const NIGERIAN_STATES = [
+  "Abia", "Adamawa", "Akwa Ibom", "Anambra", "Bauchi", "Bayelsa", "Benue",
+  "Borno", "Cross River", "Delta", "Ebonyi", "Edo", "Ekiti", "Enugu", "FCT",
+  "Gombe", "Imo", "Jigawa", "Kaduna", "Kano", "Katsina", "Kebbi", "Kogi",
+  "Kwara", "Lagos", "Nasarawa", "Niger", "Ogun", "Ondo", "Osun", "Oyo",
+  "Plateau", "Rivers", "Sokoto", "Taraba", "Yobe", "Zamfara"
+];
+
 // CREATE news
 const createNews = async (req, res) => {
   try {
-    const { title, category, author, description, date } = req.body;
+    const { title, category, author, description, date, state } = req.body;
+
+    // Validate state
+    if (!state || !NIGERIAN_STATES.includes(state)) {
+      return res.status(400).json({ message: "Valid Nigerian state is required" });
+    }
+
     let imageUrl = "";
 
     if (req.file) {
@@ -37,6 +51,7 @@ const createNews = async (req, res) => {
       category,
       author,
       description,
+      state,
       date,
       image: imageUrl,
     });
@@ -50,10 +65,11 @@ const createNews = async (req, res) => {
 // READ all news with optional filtering & pagination
 const getAllNews = async (req, res) => {
   try {
-    const { category, author, date, page = 1, limit = 20 } = req.query;
+    const { category, author, date, state, page = 1, limit = 20 } = req.query;
     let filter = {};
     if (category) filter.category = new RegExp(category, 'i');
     if (author) filter.author = new RegExp(author, 'i');
+    if (state) filter.state = state;
     if (date) {
       // Create a date range for the entire day
       const startDate = new Date(date);
@@ -129,10 +145,20 @@ const deleteNews = async (req, res) => {
   }
 };
 
+// GET all states
+const getStates = async (req, res) => {
+  try {
+    res.json(NIGERIAN_STATES);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 module.exports = {
   createNews,
   getAllNews,
   getNewsById,
   updateNews,
   deleteNews,
+  getStates,
 };

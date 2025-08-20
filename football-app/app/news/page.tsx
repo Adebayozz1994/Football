@@ -6,10 +6,19 @@ import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import axios from '@/utils/axios';
 
+const NIGERIAN_STATES = [
+  "Abia", "Adamawa", "Akwa Ibom", "Anambra", "Bauchi", "Bayelsa", "Benue", "Borno",
+  "Cross River", "Delta", "Ebonyi", "Edo", "Ekiti", "Enugu", "FCT", "Gombe", "Imo",
+  "Jigawa", "Kaduna", "Kano", "Katsina", "Kebbi", "Kogi", "Kwara", "Lagos", "Nasarawa",
+  "Niger", "Ogun", "Ondo", "Osun", "Oyo", "Plateau", "Rivers", "Sokoto", "Taraba",
+  "Yobe", "Zamfara"
+];
+
 interface NewsItem {
   _id: string
   title: string
   category: string
+  state: string
   author: string
   description: string
   date: string
@@ -26,6 +35,7 @@ export default function PublicNewsList() {
   const [error, setError] = useState("")
   const [filterDate, setFilterDate] = useState("")
   const [filterCategory, setFilterCategory] = useState("All")
+  const [filterState, setFilterState] = useState("All")
 
   // Black and gold color palette
   const black = "rgb(24, 24, 24)"
@@ -59,7 +69,9 @@ export default function PublicNewsList() {
     const matchesCategory = filterCategory === "All" || item.category === filterCategory
     // Date filter (compare only date part)
     const matchesDate = !filterDate || item.date?.slice(0, 10) === filterDate
-    return matchesCategory && matchesDate
+    // State filter
+    const matchesState = filterState === "All" || item.state === filterState
+    return matchesCategory && matchesDate && matchesState
   })
 
   if (selected) {
@@ -110,6 +122,19 @@ export default function PublicNewsList() {
                     <Tag size={16} />
                     {selected.category}
                   </span>
+                  {selected.state && (
+                    <span
+                      style={{
+                        background: "rgba(255, 215, 0, 0.9)",
+                        color: black,
+                        boxShadow: `0 2px 8px ${goldDark}40`,
+                        fontWeight: 600
+                      }}
+                      className="inline-flex items-center gap-2 px-3 py-2 rounded-full text-sm shadow-lg"
+                    >
+                      📍 {selected.state}
+                    </span>
+                  )}
                   <time
                     style={{ background: black, color: gold, border: `1px solid ${goldDark}` }}
                     className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm shadow-lg"
@@ -213,17 +238,29 @@ export default function PublicNewsList() {
                 <option value={c} key={c}>{c}</option>
               ))}
             </select>
+            <select
+              value={filterState}
+              onChange={e => setFilterState(e.target.value)}
+              className="border px-4 py-2 rounded text-black font-semibold"
+              style={{ minWidth: 180 }}
+            >
+              <option value="All">All States</option>
+              {NIGERIAN_STATES.map(state => (
+                <option value={state} key={state}>{state}</option>
+              ))}
+            </select>
             <input
               type="date"
               value={filterDate}
               onChange={e => setFilterDate(e.target.value)}
               className="border px-4 py-2 rounded text-black font-semibold"
             />
-            {(filterDate || filterCategory !== "All") && (
+            {(filterDate || filterCategory !== "All" || filterState !== "All") && (
               <button
                 onClick={() => {
                   setFilterDate("");
                   setFilterCategory("All");
+                  setFilterState("All");
                 }}
                 className="bg-yellow-400 text-black px-4 py-2 rounded font-semibold shadow hover:bg-yellow-300 transition"
               >
@@ -286,7 +323,7 @@ export default function PublicNewsList() {
                       <span style={{ color: gold }}>No image available</span>
                     </div>
                   )}
-                  <div className="absolute top-4 left-4 z-10">
+                  <div className="absolute top-4 left-4 z-10 flex flex-wrap gap-2">
                     <span
                       style={{
                         background: gold,
@@ -299,6 +336,19 @@ export default function PublicNewsList() {
                       <Tag size={14} />
                       {item.category}
                     </span>
+                    {item.state && (
+                      <span
+                        style={{
+                          background: "rgba(255, 215, 0, 0.9)",
+                          color: black,
+                          fontWeight: 600,
+                          boxShadow: `0 2px 8px ${goldDark}40`
+                        }}
+                        className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs shadow-lg"
+                      >
+                        📍 {item.state}
+                      </span>
+                    )}
                   </div>
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                 </div>
