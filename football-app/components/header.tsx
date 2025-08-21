@@ -241,6 +241,7 @@ export function Header() {
                       <span>{item.name}</span>
                     </Link>
                   ))}
+
                   <div className="border-t border-gold-400/20 pt-6">
                     {/* Admin button for mobile */}
                     {!profileType && (

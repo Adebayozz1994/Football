@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -16,17 +16,26 @@ import {
 } from "@/components/ui/skeletons"
 
 interface Match {
-  id: number | string
+  _id?: string
+  id?: string | number
   homeTeam: string
   awayTeam: string
   homeScore?: number
   awayScore?: number
   state?: string
-  date: string
-  time: string
+  matchDate?: string
+  date?: string
+  matchTime?: string
+  time?: string
+  venue?: string
   status: "live" | "scheduled" | "finished"
   minute?: number
-  venue?: string
+  competition?: string
+  bigChance?: {
+    team: "home" | "away"
+    description: string
+    timestamp: number
+  }
 }
 
 interface News {
@@ -46,25 +55,148 @@ export default function HomePage() {
   const [loadingMatches, setLoadingMatches] = useState(true)
   const [loadingNews, setLoadingNews] = useState(true)
 
-  // Fetch Matches
+  // --- For live update and big chance effect ---
+  // This state stores last scores to compare for big chance highlight
+  const [lastScores, setLastScores] = useState<Record<string, {home: number, away: number}>>({})
+
+  // Shared fetch function for matches
+  const fetchAndSetMatches = useCallback(async () => {
+    try {
+      const response = await axios.get("/matches?limit=3")
+      const data = response.data
+      if (Array.isArray(data)) {
+        // Sort: live > scheduled > finished
+        const sorted = [
+          ...data.filter((m: Match) => m.status === "live"),
+          ...data.filter((m: Match) => m.status === "scheduled"),
+          ...data.filter((m: Match) => m.status === "finished"),
+        ]
+        // Merge bigChance logic
+        const updated: Match[] = sorted.slice(0,3).map((m: any) => {
+          const matchId = m._id || m.id
+          const prev = lastScores[matchId]
+          if (prev && m.status === "live") {
+            if (prev.home !== (m.homeScore || 0) || prev.away !== (m.awayScore || 0)) {
+              return {
+                ...m,
+                _id: matchId,
+                bigChance: {
+                  team: (prev.home !== (m.homeScore || 0) ? "home" : "away") as "home" | "away",
+                  description: "Potential goal!",
+                  timestamp: Date.now()
+                }
+              } as Match
+            }
+          }
+          return {
+            ...m,
+            _id: matchId
+          } as Match
+        })
+        setFeaturedMatches(updated)
+        // Save the latest score for next compare
+        setLastScores(
+          Object.fromEntries(
+            updated.map(m => [m._id || m.id, {home: m.homeScore || 0, away: m.awayScore || 0}])
+          )
+        )
+      }
+      setLoadingMatches(false)
+    } catch {
+      setLoadingMatches(false)
+    }
+  }, [lastScores])
+
+  // Initial fetch
   useEffect(() => {
     setLoadingMatches(true)
-    axios
-      .get("/matches?limit=3")
-      .then((response) => {
-        const data = response.data
-        if (Array.isArray(data)) {
-          const sorted = [
-            ...data.filter(m => m.status === "live"),
-            ...data.filter(m => m.status === "scheduled"),
-            ...data.filter(m => m.status === "finished"),
-          ]
-          setFeaturedMatches(sorted.slice(0, 3))
-        }
-        setLoadingMatches(false)
-      })
-      .catch(() => setLoadingMatches(false))
+    fetchAndSetMatches()
   }, [])
+
+  // Live updates effect - matches the user matches page exactly
+  useEffect(() => {
+    const hasLiveMatches = featuredMatches.some(match => match.status === "live")
+    if (hasLiveMatches) {
+      const fastPollInterval = setInterval(() => {
+        fetchAndSetMatches()
+      }, 5000)
+      
+      let ws: WebSocket | null = null
+      try {
+        ws = new WebSocket('ws://https://football-7jrz.onrender.com/ws/matches')
+        ws.onopen = () => { console.log('WebSocket Connected') }
+        ws.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data) as {
+              type: string;
+              matchId: string;
+              team: "home" | "away";
+              update?: Partial<Match>;
+            }
+            if (data.type === 'score_update') {
+              setFeaturedMatches(prev => prev.map(match => {
+                if ((match._id || match.id) === data.matchId) {
+                  return {
+                    ...match,
+                    bigChance: {
+                      team: data.team,
+                      description: "Potential goal!",
+                      timestamp: Date.now()
+                    }
+                  }
+                }
+                return match
+              }))
+              setTimeout(() => {
+                setFeaturedMatches(prev => prev.map(match => {
+                  if ((match._id || match.id) === data.matchId) {
+                    return {
+                      ...match,
+                      ...data.update,
+                      bigChance: undefined
+                    }
+                  }
+                  return match
+                }))
+              }, 3000)
+            }
+          } catch (err) {
+            console.log('Error processing WebSocket message:', err)
+          }
+        }
+        ws.onerror = () => {
+          console.log('WebSocket connection failed, falling back to polling')
+          ws = null
+        }
+        ws.onclose = () => {
+          console.log('WebSocket connection closed')
+          ws = null
+        }
+      } catch (err) {
+        console.log('WebSocket connection failed:', err)
+        ws = null
+      }
+
+      return () => {
+        clearInterval(fastPollInterval)
+        if (ws) {
+          ws.close()
+        }
+      }
+    }
+  }, [featuredMatches])
+
+  // Remove bigChance highlight after 5 seconds on card update
+  useEffect(() => {
+    if (featuredMatches.some(m => m.bigChance)) {
+      const timer = setTimeout(() => {
+        setFeaturedMatches(prev =>
+          prev.map(m => m.bigChance ? { ...m, bigChance: undefined } : m)
+        )
+      }, 5000)
+      return () => clearTimeout(timer)
+    }
+  }, [featuredMatches])
 
   // Fetch News
   useEffect(() => {
@@ -82,11 +214,117 @@ export default function HomePage() {
   }, [])
 
   const stats = [
-    { label: "Active Teams", value: "456", icon: Users },
-    { label: "Matches Played", value: "1,234", icon: Trophy },
-    { label: "News Articles", value: "2,890", icon: Newspaper },
-    { label: "Active Users", value: "45.2K", icon: TrendingUp },
+    { label: "Active Teams", value: "100", icon: Users },
+    { label: "Matches Played", value: "500", icon: Trophy },
+    { label: "News Articles", value: "70", icon: Newspaper },
+    { label: "Active Users", value: "1.5K", icon: TrendingUp },
   ]
+
+  // -- Match Card for landing page (styled like your match card, with bigChance effect) --
+  const LandingMatchCard = ({ match }: { match: Match }) => (
+    <Card className="card-black-gold hover:scale-105 transition-all duration-300 group cursor-pointer">
+      <CardHeader>
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex gap-2">
+            <Badge
+              variant={match.status === "live" ? "destructive" : match.status === "scheduled" ? "secondary" : "outline"}
+              className={match.status === "live" ? "animate-pulse-gold" : ""}
+            >
+              {match.status === "live" ? (
+                <div className="flex items-center">
+                  <div className="live-indicator w-2 h-2 mr-2"></div>
+                  Live {match.minute ? `${match.minute}'` : ""}
+                </div>
+              ) : match.status === "scheduled" ? (
+                "UPCOMING"
+              ) : (
+                "FINISHED"
+              )}
+            </Badge>
+          </div>
+          {match.venue && (
+            <div className="flex items-center text-sm text-yellow-400">
+              <MapPin className="h-4 w-4 mr-1" />
+              {match.venue}
+            </div>
+          )}
+        </div>
+        <div className="flex flex-wrap gap-3 justify-center">
+          <Badge 
+            variant="outline" 
+            className="bg-gold-400/20 text-gold-400 border-gold-400 px-3 py-1 text-sm font-semibold flex items-center"
+          >
+            <MapPin className="h-4 w-4 mr-1" />
+            {match.state}
+          </Badge>
+          <Badge 
+            variant="outline" 
+            className="bg-blue-500/20 text-blue-300 border-blue-400 px-3 py-1 text-sm font-semibold flex items-center"
+          >
+            <Trophy className="h-4 w-4 mr-1" />
+            {match.competition}
+          </Badge>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <div className="text-center mb-6">
+          <div className="flex items-center justify-between mb-6">
+            <div className="text-center flex-1">
+              <div className="w-16 h-16 mx-auto mb-3 bg-gradient-gold rounded-full flex items-center justify-center">
+                <Trophy className="h-8 w-8 text-black-900" />
+              </div>
+              <div className="font-semibold text-white text-lg">{match.homeTeam}</div>
+              <div className="text-xs text-gray-400 mt-1">HOME</div>
+            </div>
+            <div className="text-center mx-6 relative">
+              <div className={`text-5xl font-bold text-gold-400 mb-2 transition-all duration-300 
+                ${match.bigChance ? "scale-125 drop-shadow-lg text-yellow-400 animate-blink-chance" : ""}`}>
+                {match.status !== "scheduled" ? `${match.homeScore}-${match.awayScore}` : "VS"}
+              </div>
+              {match.status === "live" && (
+                <>
+                  <div className="text-xs text-red-400 animate-pulse">Live</div>
+                  {match.bigChance && (
+                    <div className="mt-2 text-sm">
+                      <div className="text-xs text-red-500 px-1 py-1 rounded animate-blink-chance font-bold">
+                        big chance
+                      </div>
+                      <div className="text-xs mt-1 text-yellow-400">
+                        {match.bigChance.team === "home" ? match.homeTeam : match.awayTeam}
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+            <div className="text-center flex-1">
+              <div className="w-16 h-16 mx-auto mb-3 bg-gradient-gold rounded-full flex items-center justify-center">
+                <Trophy className="h-8 w-8 text-black-900" />
+              </div>
+              <div className="font-semibold text-white text-lg">{match.awayTeam}</div>
+              <div className="text-xs text-gray-400 mt-1">AWAY</div>
+            </div>
+          </div>
+        </div>
+        <div className="space-y-3 text-sm text-gray-400 mb-6">
+          <div className="flex items-center justify-center">
+            <Calendar className="h-4 w-4 mr-2 text-gold-400" />
+            {match.matchDate}
+            {match.matchTime && (
+              <>
+                <Clock className="h-4 w-4 ml-4 mr-2 text-gold-400" />
+                {match.matchTime}
+              </>
+            )}
+          </div>
+          {match.venue && <div className="text-center font-medium text-gold-400">{match.venue}</div>}
+        </div>
+        <Button className="w-full btn-gold">
+          {match.status === "live" ? "Watch Live" : "View Details"}
+        </Button>
+      </CardContent>
+    </Card>
+  )
 
   return (
     <div className="min-h-screen bg-black text-yellow-400">
@@ -164,71 +402,8 @@ export default function HomePage() {
             ) : featuredMatches.length === 0 ? (
               <div className="col-span-full text-center text-gray-300">No matches found.</div>
             ) : (
-              featuredMatches.map((match, index) => (
-                <Card key={match.id || `match-${index}`} className="card-black-gold hover:scale-105 transition-all duration-300">
-                  <CardHeader>
-                    <div className="flex items-center justify-between">
-                      <Badge
-                        variant={
-                          match.status === "live"
-                            ? "destructive"
-                            : match.status === "scheduled"
-                            ? "secondary"
-                            : "outline"
-                        }
-                        className={match.status === "live" ? "animate-pulse-gold" : ""}
-                      >
-                        {match.status === "live" ? (
-                          <div className="flex items-center">
-                            <div className="live-indicator w-2 h-2 mr-2" />
-                            LIVE {match.minute ? `${match.minute}'` : ""}
-                          </div>
-                        ) : match.status === "scheduled" ? (
-                          "SCHEDULED"
-                        ) : (
-                          "FINISHED"
-                        )}
-                      </Badge>
-                      {match.state && (
-                        <div className="flex items-center text-sm text-yellow-400">
-                          <MapPin className="h-4 w-4 mr-1" />
-                          {match.state}
-                        </div>
-                      )}
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-center mb-6">
-                      <div className="flex items-center justify-between mb-4">
-                        <div className="flex-1 text-center">
-                          <div className="font-semibold text-white text-lg">{match.homeTeam}</div>
-                        </div>
-                        <div className="text-4xl font-bold mx-6 text-yellow-400">
-                          {match.status === "finished" || match.status === "live"
-                            ? `${match.homeScore ?? "-"}-${match.awayScore ?? "-"}`
-                            : "VS"}
-                        </div>
-                        <div className="flex-1 text-center">
-                          <div className="font-semibold text-white text-lg">{match.awayTeam}</div>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="space-y-3 text-sm text-gray-400 mb-6">
-                      <div className="flex items-center justify-center">
-                        <Calendar className="h-4 w-4 mr-2" />
-                        {match.date}
-                        <Clock className="h-4 w-4 ml-4 mr-2" />
-                        {match.time}
-                      </div>
-                      {match.venue && <div className="text-center text-xs">{match.venue}</div>}
-                    </div>
-
-                    <Button className="w-full btn-gold">
-                      {match.status === "live" ? "Watch Live" : "View Details"}
-                    </Button>
-                  </CardContent>
-                </Card>
+              featuredMatches.map((match) => (
+                <LandingMatchCard key={match._id} match={match} />
               ))
             )}
           </div>
