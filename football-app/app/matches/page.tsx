@@ -298,7 +298,7 @@ export default function MatchesPage() {
       }, 5000)
       let ws: WebSocket | null = null
       try {
-        ws = new WebSocket('ws://https://football-7jrz.onrender.com/ws/matches')
+        ws = new WebSocket('wss://football-7jrz.onrender.com/ws/matches')
         ws.onopen = () => { console.log('WebSocket Connected') }
         ws.onmessage = (event) => {
           try {

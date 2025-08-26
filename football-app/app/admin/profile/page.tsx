@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { useToast } from "@/components/ui/use-toast"
@@ -27,7 +27,6 @@ import {
   Users,
 } from "lucide-react"
 import Link from "next/link"
-import Image from "next/image"
 import axios from "@/utils/axios"
 
 export default function AdminProfilePage() {
@@ -57,6 +56,22 @@ export default function AdminProfilePage() {
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
   const avatarFileRef = useRef<File | null>(null)
+  const previewUrlRef = useRef<string | null>(null)
+
+  // Cleanup function for object URLs
+  const cleanupPreviewUrl = () => {
+    if (previewUrlRef.current) {
+      URL.revokeObjectURL(previewUrlRef.current)
+      previewUrlRef.current = null
+    }
+  }
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      cleanupPreviewUrl()
+    }
+  }, [])
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -192,6 +207,7 @@ export default function AdminProfilePage() {
           avatar_url: data.data.admin.avatar || prev.avatar_url,
         }));
         avatarFileRef.current = null;
+        cleanupPreviewUrl(); // Clean up preview URL after successful save
         toast({
           title: "Profile Updated",
           description: "Your profile has been successfully updated.",
@@ -214,6 +230,7 @@ export default function AdminProfilePage() {
     if (profile) {
       setFormData({ ...profile, email: user?.email || "" })
       avatarFileRef.current = null
+      cleanupPreviewUrl() // Clean up preview URL on cancel
     }
     setIsEditing(false)
   }
@@ -228,11 +245,44 @@ export default function AdminProfilePage() {
       })
       return
     }
-    avatarFileRef.current = files[0]
+
+    const file = files[0]
+    
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: "Invalid file type",
+        description: "Please select an image file (JPG, PNG, GIF, etc.).",
+        variant: "destructive",
+      })
+      return
+    }
+
+    // Validate file size (5MB max)
+    const maxSize = 5 * 1024 * 1024 // 5MB
+    if (file.size > maxSize) {
+      toast({
+        title: "File too large",
+        description: "Please select an image smaller than 5MB.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    avatarFileRef.current = file
+    cleanupPreviewUrl() // Clean up previous preview URL
+    const previewUrl = URL.createObjectURL(file)
+    previewUrlRef.current = previewUrl
+    
     setFormData((prev) => ({
       ...prev,
-      avatar_url: URL.createObjectURL(files[0]),
+      avatar_url: previewUrl,
     }))
+
+    toast({
+      title: "Image selected",
+      description: "Click 'Save Changes' to upload your new profile picture.",
+    })
   }
 
   if (isLoading) {
@@ -345,20 +395,42 @@ export default function AdminProfilePage() {
         <Card className="card-black-gold">
           <CardHeader className="flex flex-col items-center">
             <div className="relative group mb-4">
-              <Avatar className="h-24 w-24 border-2 border-yellow-400">
-                <Image
+              <Avatar className="w-24 h-24 mx-auto border-4 border-white shadow-lg">
+                <AvatarImage
                   src={formData.avatar_url || "/placeholder-user.jpg"}
-                  alt={formData.full_name || "User"}
-                  width={96} // Match the size of the avatar (24x24 in rem)
-                  height={96}
-                  className="rounded-full border-2 border-yellow-400"
-                  placeholder="blur"
-                  blurDataURL="/placeholder-user.jpg" // Optional placeholder
+                  alt="Admin Avatar"
+                  className="object-cover"
                 />
-                <AvatarFallback className="bg-gray-800 text-yellow-400 text-4xl">
-                  {formData.full_name ? formData.full_name.charAt(0).toUpperCase() : <User className="h-12 w-12" />}
+                <AvatarFallback className="text-xl bg-gray-200">
+                  {formData.full_name?.charAt(0) || 'A'}
                 </AvatarFallback>
               </Avatar>
+              {avatarFileRef.current && (
+                <div className="absolute -top-2 -right-2 bg-yellow-400 text-black text-xs px-2 py-1 rounded-full font-semibold">
+                  Preview
+                </div>
+              )}
+              {avatarFileRef.current && isEditing && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    avatarFileRef.current = null
+                    cleanupPreviewUrl() // Clean up the preview URL
+                    setFormData(prev => ({
+                      ...prev,
+                      avatar_url: profile?.avatar_url || "/placeholder-user.jpg"
+                    }))
+                    toast({
+                      title: "Preview cleared",
+                      description: "Reverted to your current profile picture.",
+                    })
+                  }}
+                  className="absolute -top-2 -left-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-600 transition-colors"
+                  title="Clear preview"
+                >
+                  ×
+                </button>
+              )}
               {isEditing && (
                 <Label
                   htmlFor="avatar-upload"

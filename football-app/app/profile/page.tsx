@@ -55,6 +55,22 @@ export default function UserProfilePage() {
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
   const avatarFileRef = useRef<File | null>(null)
+  const previewUrlRef = useRef<string | null>(null)
+
+  // Cleanup function for object URLs
+  const cleanupPreviewUrl = () => {
+    if (previewUrlRef.current) {
+      URL.revokeObjectURL(previewUrlRef.current)
+      previewUrlRef.current = null
+    }
+  }
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      cleanupPreviewUrl()
+    }
+  }, [])
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -183,6 +199,7 @@ export default function UserProfilePage() {
           avatar_url: data.data.user.avatar || prev.avatar_url,
         }))
         avatarFileRef.current = null
+        cleanupPreviewUrl() // Clean up preview URL after successful save
         toast({
           title: "Profile Updated",
           description: "Your profile has been successfully updated.",
@@ -205,6 +222,7 @@ export default function UserProfilePage() {
     if (profile) {
       setFormData({ ...profile, email: user?.email || "" })
       avatarFileRef.current = null
+      cleanupPreviewUrl() // Clean up preview URL on cancel
     }
     setIsEditing(false)
   }
@@ -219,11 +237,44 @@ export default function UserProfilePage() {
       })
       return
     }
-    avatarFileRef.current = files[0]
+
+    const file = files[0]
+    
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: "Invalid file type",
+        description: "Please select an image file (JPG, PNG, GIF, etc.).",
+        variant: "destructive",
+      })
+      return
+    }
+
+    // Validate file size (5MB max)
+    const maxSize = 5 * 1024 * 1024 // 5MB
+    if (file.size > maxSize) {
+      toast({
+        title: "File too large",
+        description: "Please select an image smaller than 5MB.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    avatarFileRef.current = file
+    cleanupPreviewUrl() // Clean up previous preview URL
+    const previewUrl = URL.createObjectURL(file)
+    previewUrlRef.current = previewUrl
+    
     setFormData((prev) => ({
       ...prev,
-      avatar_url: URL.createObjectURL(files[0]),
+      avatar_url: previewUrl,
     }))
+
+    toast({
+      title: "Image selected",
+      description: "Click 'Save Changes' to upload your new profile picture.",
+    })
   }
 
   if (isLoading) {
@@ -344,6 +395,32 @@ export default function UserProfilePage() {
                   {formData.full_name ? formData.full_name.charAt(0).toUpperCase() : <User className="h-12 w-12" />}
                 </AvatarFallback>
               </Avatar>
+              {avatarFileRef.current && (
+                <div className="absolute -top-2 -right-2 bg-yellow-400 text-black text-xs px-2 py-1 rounded-full font-semibold">
+                  Preview
+                </div>
+              )}
+              {avatarFileRef.current && isEditing && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    avatarFileRef.current = null
+                    cleanupPreviewUrl() // Clean up the preview URL
+                    setFormData(prev => ({
+                      ...prev,
+                      avatar_url: profile?.avatar_url || "/placeholder-user.jpg"
+                    }))
+                    toast({
+                      title: "Preview cleared",
+                      description: "Reverted to your current profile picture.",
+                    })
+                  }}
+                  className="absolute -top-2 -left-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-600 transition-colors"
+                  title="Clear preview"
+                >
+                  ×
+                </button>
+              )}
               {isEditing && (
                 <Label
                   htmlFor="avatar-upload"

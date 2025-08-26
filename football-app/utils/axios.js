@@ -3,6 +3,7 @@ import axios from 'axios';
 const instance = axios.create({
   baseURL: 'https://football-7jrz.onrender.com/api',
 });
+// http://localhost:5000/api
 // https://football-7jrz.onrender.com/api
 // Add a request interceptor
 instance.interceptors.request.use(
