@@ -62,8 +62,15 @@ const nigerianStates = [
 ]
 
 const competitions = [
-  "NPFL", "NNL", "NLO", "State League", "FA Cup", "League Cup", 
-  "Super Cup", "Youth League", "Women's League", "Amateur League"
+  "Orumogege Football Competition",
+  "Olufem Presenter Football Competition",
+  "U17 Friendly Tournament",
+  "UNICEF Awareness Tournament",
+  "Twindad Cup",
+  "Jodelapo Football Competition",
+  "Solmed Foundation Sunday Set Competition",
+  "Club Friendly",
+  "Vocational Football Tournament"
 ]
 
 // Match Details Modal Component (unchanged, as in your code)
@@ -290,6 +297,19 @@ export default function MatchesPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedState, selectedCompetition, selectedStatus, selectedDate, searchTerm])
 
+  // Regular polling for all match status updates (every 30 seconds)
+  useEffect(() => {
+    const globalRefreshInterval = setInterval(() => {
+      console.log("Global refresh to check all match statuses")
+      fetchMatches(true)
+    }, 20000) 
+    
+    return () => {
+      clearInterval(globalRefreshInterval)
+    }
+  }, [])
+
+  // Fast polling and WebSocket for live matches
   useEffect(() => {
     const hasLiveMatches = matches.some(match => match.status === "live")
     if (hasLiveMatches) {

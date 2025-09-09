@@ -10,8 +10,15 @@ const NIGERIAN_STATES = [
 ];
 
 const COMPETITIONS = [
-  "NPFL", "NNL", "NLO", "State League", "FA Cup", "League Cup", 
-  "Super Cup", "Youth League", "Women's League", "Amateur League"
+  "Orumogege Football Competition",
+  "Olufem Presenter Football Competition",
+  "U17 Friendly Tournament",
+  "UNICEF Awareness Tournament",
+  "Twindad Cup",
+  "Jodelapo Football Competition",
+  "Solmed Foundation Sunday Set Competition",
+  "Club Friendly",
+  "Vocational Football Tournament"
 ];
 
 // Helper: valid event types
