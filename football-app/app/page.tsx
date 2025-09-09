@@ -113,7 +113,20 @@ export default function HomePage() {
     fetchAndSetMatches()
   }, [])
 
-  // Live updates effect - matches the user matches page exactly
+  // Regular auto-refresh every 30 seconds for all match statuses
+  useEffect(() => {
+    console.log("Setting up main page auto-refresh")
+    const regularRefreshInterval = setInterval(() => {
+      console.log("Main page auto-refresh triggered")
+      fetchAndSetMatches()
+    }, 20000)
+    
+    return () => {
+      clearInterval(regularRefreshInterval)
+    }
+  }, []) 
+
+  // Live updates effect - for more frequent updates to live matches
   useEffect(() => {
     const hasLiveMatches = featuredMatches.some(match => match.status === "live")
     if (hasLiveMatches) {
