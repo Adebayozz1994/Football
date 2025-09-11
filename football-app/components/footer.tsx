@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { Trophy, Facebook, Twitter, Instagram, Youtube, Mail, Phone, MapPin } from "lucide-react"
+import { Trophy, Facebook, Twitter, Linkedin, Github, Mail, Phone, MapPin } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 
@@ -21,10 +21,22 @@ export function Footer() {
               The ultimate destination for Nigerian local football and European leagues coverage with premium features
               and real-time updates.
             </p>
+            {/* Social Media Links */}
             <div className="flex space-x-4">
-              {[Facebook, Twitter, Instagram, Youtube].map((Icon, index) => (
-                <Link key={index} href="#" className="text-gray-400 hover:text-gold-400 transition-colors">
-                  <Icon className="h-6 w-6" />
+              {[
+                { Icon: Facebook, href: 'https://web.facebook.com/Adebayozz' },
+                { Icon: Twitter, href: 'https://x.com/Adebayozz1' },
+                { Icon: Linkedin, href: 'https://www.linkedin.com/in/ogunlade-adebayo-2a1786294/' },
+                { Icon: Github, href: 'https://github.com/Adebayozz1994' },
+              ].map((social, index) => (
+                <Link
+                  key={index}
+                  href={social.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-gray-400 hover:text-gold-400 transition-colors"
+                >
+                  <social.Icon className="h-6 w-6" />
                 </Link>
               ))}
             </div>
@@ -102,9 +114,9 @@ export function Footer() {
 
         <div className="border-t border-gold-400/20 mt-12 pt-8">
           <div className="flex flex-col md:flex-row justify-between items-center">
-            <p className="text-gray-400 text-sm">&copy; 2025 Nigerian Football Hub. All rights reserved.</p>
+            <p className="text-gray-400 text-sm">&copy; 2025 OFM Media. All rights reserved.</p>
             <div className="flex space-x-6 mt-4 md:mt-0">
-              <Link href="/privacy" className="text-gray-400 hover:text-gold-400 text-sm transition-colors">
+              <Link href="/policy" className="text-gray-400 hover:text-gold-400 text-sm transition-colors">
                 Privacy Policy
               </Link>
               <Link href="/terms" className="text-gray-400 hover:text-gold-400 text-sm transition-colors">

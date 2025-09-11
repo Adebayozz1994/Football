@@ -15,7 +15,8 @@ require('./models/News');
 const userRoutes = require('./routes/user.routes');
 const adminRoutes = require('./routes/admin.routes'); 
 const matchRoutes = require('./routes/match.routes'); 
-const newsRoutes = require('./routes/news.routes'); 
+const newsRoutes = require('./routes/news.routes');
+const contactRoutes = require('./routes/contact.routes');
 
 
 const app = express();
@@ -54,6 +55,7 @@ app.use('/api/user', userRoutes);
 app.use('/api/admin', adminRoutes); 
 app.use('/api/matches', matchRoutes); 
 app.use('/api/news', newsRoutes);
+app.use('/api/contact', contactRoutes);
 
 
 

@@ -14,6 +14,7 @@ import {
   NewsCardSkeleton, 
   PageHeaderSkeleton 
 } from "@/components/ui/skeletons"
+import LoadingScreen from "@/components/LoadingScreen"
 
 interface Match {
   _id?: string
@@ -58,6 +59,13 @@ export default function HomePage() {
   // --- For live update and big chance effect ---
   // This state stores last scores to compare for big chance highlight
   const [lastScores, setLastScores] = useState<Record<string, {home: number, away: number}>>({})
+  const [showLoading, setShowLoading] = useState(true)
+
+  // Splash loading screen for initial load
+  useEffect(() => {
+    const timer = setTimeout(() => setShowLoading(false), 5000)
+    return () => clearTimeout(timer)
+  }, [])
 
   // Shared fetch function for matches
   const fetchAndSetMatches = useCallback(async () => {
@@ -226,6 +234,11 @@ export default function HomePage() {
       .catch(() => setLoadingNews(false))
   }, [])
 
+  // Display loading screen for initial 5 seconds
+  if (showLoading) {
+    return <LoadingScreen />
+  }
+
   const stats = [
     { label: "Active Teams", value: "100", icon: Users },
     { label: "Matches Played", value: "500", icon: Trophy },
@@ -357,8 +370,7 @@ export default function HomePage() {
             <span className="text-white">Hub</span>
           </h1>
           <p className="text-xl md:text-2xl mb-12 max-w-4xl mx-auto text-gray-300 leading-relaxed">
-            Experience the ultimate destination for Nigerian local football and European leagues coverage with
-            real-time updates, comprehensive statistics, and premium content.
+            GET LIVE FOOTBALL SCORES AND REAL-TIME FOOTBALL FIXTURES, RESULTS, REPORTS, STATS AND RECORDS HERE AT ORIGINAL FOOTBALL MATTERS!
           </p>
           <div className="flex flex-col sm:flex-row gap-6 justify-center">
             <Button size="lg" className="btn-gold text-lg px-8 py-4" asChild>

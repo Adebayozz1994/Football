@@ -9,6 +9,7 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Menu, Search, Trophy, Users, Newspaper, Globe, User, Bell, LogOut, Shield, Settings } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import axios from "@/utils/axios"
 
 export function Header() {
   const [isSearchOpen, setIsSearchOpen] = useState(false)
@@ -31,36 +32,36 @@ export function Header() {
 
     if (adminToken) {
       setProfileType("admin")
-      fetch("http://localhost:5000/api/admin/profile", {
+  axios.get("/admin/profile", {
         headers: { Authorization: `Bearer ${adminToken}` }
       })
-        .then(res => res.json())
-        .then(data => {
-          if (data.success && data.data?.admin) {
-            setProfile({
-              avatar: data.data.admin.avatar || "/placeholder-user.jpg",
-              name: data.data.admin.firstName + " " + data.data.admin.lastName,
-              email: data.data.admin.email
-            })
-          }
-        })
-        .catch(() => setProfile(null))
+      .then(res => {
+        const data = res.data
+        if (data.success && data.data?.admin) {
+          setProfile({
+            avatar: data.data.admin.avatar || "/placeholder-user.jpg",
+            name: data.data.admin.firstName + " " + data.data.admin.lastName,
+            email: data.data.admin.email
+          })
+        }
+      })
+      .catch(() => setProfile(null))
     } else if (userToken) {
       setProfileType("user")
-      fetch("http://localhost:5000/api/user/profile", {
+      axios.get("/user/profile", {
         headers: { Authorization: `Bearer ${userToken}` }
       })
-        .then(res => res.json())
-        .then(data => {
-          if (data.success && data.data?.user) {
-            setProfile({
-              avatar: data.data.user.avatar || "/placeholder-user.jpg",
-              name: data.data.user.firstName + " " + data.data.user.lastName,
-              email: data.data.user.email
-            })
-          }
-        })
-        .catch(() => setProfile(null))
+      .then(res => {
+        const data = res.data
+        if (data.success && data.data?.user) {
+          setProfile({
+            avatar: data.data.user.avatar || "/placeholder-user.jpg",
+            name: data.data.user.firstName + " " + data.data.user.lastName,
+            email: data.data.user.email
+          })
+        }
+      })
+      .catch(() => setProfile(null))
     } else {
       setProfileType(null)
       setProfile(null)
@@ -103,7 +104,7 @@ export function Header() {
               <div className="absolute inset-0 bg-gold-400/20 rounded-full blur-lg group-hover:bg-gold-400/30 transition-all"></div>
             </div>
             <div>
-              <span className="font-bold text-2xl text-white font-playfair">Football Hub</span>
+              <span className="font-bold text-2xl text-white font-playfair">OFM Media</span>
               <div className="text-xs text-gold-400 font-medium">PREMIUM</div>
             </div>
           </Link>
@@ -276,7 +277,7 @@ export function Header() {
                         <Link href="/profile" className="block text-lg font-medium text-gold-400 hover:text-gold-300 mb-4">
                           Profile
                         </Link>
-                        <Link href="/settings" className="block text-lg font-medium text-gold-400 hover:text-gold-300 mb-4 flex items-center">
+                        <Link href="/settings" className="flex items-center text-lg font-medium text-gold-400 hover:text-gold-300 mb-4">
                           <Settings className="mr-2 h-5 w-5" />
                           Settings
                         </Link>
