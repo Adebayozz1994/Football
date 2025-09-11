@@ -20,6 +20,7 @@ const LoadingScreen = () => {
           width={120}
           height={120}
           className="rounded"
+          priority
         />
       </div>
       <Motion.div
