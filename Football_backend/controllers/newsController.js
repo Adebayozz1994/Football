@@ -15,7 +15,6 @@ const createNews = async (req, res) => {
   try {
     const { title, category, author, description, date, state } = req.body;
 
-    // Validate state
     if (!state || !NIGERIAN_STATES.includes(state)) {
       return res.status(400).json({ message: "Valid Nigerian state is required" });
     }

@@ -21,7 +21,6 @@ const contactRoutes = require('./routes/contact.routes');
 
 const app = express();
 
-// Connect to MongoDB (preferably centralize your connection here)
 const URI = process.env.MONGO_URI;
 mongoose
   .connect(URI)
@@ -96,7 +95,6 @@ function broadcastMatchUpdate(matchId, team, update) {
   });
 }
 
-// Export for use in match controller
 module.exports = { 
   broadcastMatchUpdate: (matchId, team, update) => {
     const message = JSON.stringify({

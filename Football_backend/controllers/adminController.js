@@ -276,7 +276,7 @@ const forgotPassword = async (req, res) => {
     // Generate reset token
     const resetToken = crypto.randomBytes(32).toString("hex");
     admin.passwordResetToken = crypto.createHash("sha256").update(resetToken).digest("hex");
-    admin.passwordResetExpires = Date.now() + 10 * 60 * 1000; // 10 minutes
+    admin.passwordResetExpires = Date.now() + 10 * 60 * 1000;
 
     await admin.save();
 
@@ -285,8 +285,8 @@ const forgotPassword = async (req, res) => {
     const transporter = nodemailer.createTransport({
       service: "gmail",
       auth: {
-        user: process.env.EMAIL_USER, // your email
-        pass: process.env.EMAIL_PASS, // your app password
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS,
       },
     });
 

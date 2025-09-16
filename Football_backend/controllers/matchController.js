@@ -21,7 +21,6 @@ const COMPETITIONS = [
   "Vocational Football Tournament"
 ];
 
-// Helper: valid event types
 const validEventTypes = [
   "goal", "yellow_card", "red_card", "substitution",
   "penalty", "own_goal", "assist", "injury", "start", "end"
@@ -115,7 +114,6 @@ const updateScore = async (req, res) => {
       });
     } catch (wsError) {
       console.error('WebSocket broadcast error:', wsError);
-      // Continue with the response even if WebSocket fails
     }
     
     res.json(updatedMatch);
@@ -207,7 +205,6 @@ const markFinished = async (req, res) => {
     const updatedMatch = await match.save();
     
     try {
-      // Broadcast status update via WebSocket
       broadcastMatchUpdate(id, 'home', {
         homeScore: updatedMatch.homeScore,
         awayScore: updatedMatch.awayScore,
@@ -215,7 +212,6 @@ const markFinished = async (req, res) => {
       });
     } catch (wsError) {
       console.error('WebSocket broadcast error:', wsError);
-      // Continue with the response even if WebSocket fails
     }
     
     res.json(updatedMatch);
@@ -237,7 +233,6 @@ const markScheduled = async (req, res) => {
     const updatedMatch = await match.save();
     
     try {
-      // Broadcast status update via WebSocket
       broadcastMatchUpdate(id, 'home', {
         homeScore: updatedMatch.homeScore,
         awayScore: updatedMatch.awayScore,
@@ -245,7 +240,6 @@ const markScheduled = async (req, res) => {
       });
     } catch (wsError) {
       console.error('WebSocket broadcast error:', wsError);
-      // Continue with the response even if WebSocket fails
     }
     
     res.json(updatedMatch);
@@ -267,7 +261,6 @@ const markLive = async (req, res) => {
     const updatedMatch = await match.save();
     
     try {
-      // Broadcast status update via WebSocket
       broadcastMatchUpdate(id, 'home', {
         homeScore: updatedMatch.homeScore,
         awayScore: updatedMatch.awayScore,
@@ -275,7 +268,6 @@ const markLive = async (req, res) => {
       });
     } catch (wsError) {
       console.error('WebSocket broadcast error:', wsError);
-      // Continue with the response even if WebSocket fails
     }
     
     res.json(updatedMatch);
