@@ -56,7 +56,8 @@ const COMPETITIONS = [
   "Onirese Cup 2025",
   "Onisapa Football Competition",
   "Twindad Cup 2025",
-  "Ogo-Eri Cup"
+  "Ogo-Eri Cup",
+  "Football Lovers Cup"
 ]
 
 // Helper to get token from localStorage
