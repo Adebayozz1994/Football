@@ -17,7 +17,11 @@ const COMPETITIONS = [
   "Jodelapo Football Competition",
   "Solmed Foundation Sunday Set Competition",
   "Club Friendly",
-  "Vocational Football Tournament"
+  "Vocational Football Tournament",
+  "Onirese Cup 2025",
+  "Onisapa Football Competition",
+  "Twindad Cup 2025",
+  "Ogo-Eri Cup"
 ];
 
 // Football event schema
