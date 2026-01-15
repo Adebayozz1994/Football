@@ -12,7 +12,7 @@ export default function TermsPage() {
         <div className="container mx-auto px-4">
           <h1 className="text-4xl font-bold mb-8">Terms of Service</h1>
           <div className="space-y-6 text-gray-400 leading-relaxed">
-            <p>Welcome to OFM Media (“we,” “us,” “our”). These Terms of Service govern your access to and use of our website and related services (collectively, the “Service”). By accessing or using the Service, you agree to be bound by these Terms.</p>
+            <p>Welcome to Nigeria Football Hub ("we," "us," "our"). These Terms of Service govern your access to and use of our website and related services (collectively, the "Service"). By accessing or using the Service, you agree to be bound by these Terms.</p>
             <h2 className="text-xl font-semibold">1. Acceptance of Terms</h2>
             <p>You must be at least 13 years old to use the Service. By accessing or using the Service, you represent and warrant that you have read, understood, and agree to be bound by these Terms.</p>
             <h2 className="text-xl font-semibold">2. Changes to Terms</h2>

@@ -13,16 +13,16 @@ const LoadingScreen = () => {
       transition={{ duration: 0.5, ease: "easeOut" }}
     >
       {/* Display logo image */}
-      <div className="mb-6">
+      {/* <div className="mb-6">
         <Image
           src="/WhatsApp.jpg"
-          alt="OFM Media Logo"
+          alt="Nigeria Football Hub Logo"
           width={120}
           height={120}
           className="rounded"
           priority
         />
-      </div>
+      </div> */}
       <Motion.div
         className="text-3xl font-bold text-yellow-400 mb-8"
         initial={{ opacity: 0, y: -100 }}
@@ -30,7 +30,7 @@ const LoadingScreen = () => {
         exit={{ opacity: 0, y: 100 }}
         transition={{ duration: 0.8, ease: "easeOut" }}
       >
-        {"OFM Media".split('').map((char, index) => (
+        {"Nigeria Football Hub".split('').map((char, index) => (
           <Motion.span
             key={index}
             className="inline-block mx-1"
@@ -58,7 +58,7 @@ const LoadingScreen = () => {
         transition={{ duration: 0.8, delay: 0.2, ease: "easeOut" }}
       >
         <Loader2 className="h-6 w-6 animate-spin" />
-        <span className="text-lg">Loading OFM Media...</span>
+        <span className="text-lg">Loading Nigeria Football Hub...</span>
       </Motion.div>
       <p className="mt-4 text-sm text-yellow-400">Created by Adebayo Peter</p>
     </Motion.div>

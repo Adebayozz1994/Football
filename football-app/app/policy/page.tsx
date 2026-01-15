@@ -12,7 +12,7 @@ export default function PolicyPage() {
         <div className="container mx-auto px-4">
           <h1 className="text-4xl font-bold mb-8">Privacy Policy</h1>
           <div className="space-y-6 text-gray-400 leading-relaxed">
-            <p>Your privacy is important to OFM Media. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you visit our website or use our services.</p>
+            <p>Your privacy is important to Nigeria Football Hub. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you visit our website or use our services.</p>
             <h2 className="text-xl font-semibold">1. Information We Collect</h2>
             <ul className="list-disc pl-6">
               <li><strong>Personal Data:</strong> Information you provide directly, such as name, email, and message content when contacting us.</li>

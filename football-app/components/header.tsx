@@ -104,7 +104,7 @@ export function Header() {
               <div className="absolute inset-0 bg-gold-400/20 rounded-full blur-lg group-hover:bg-gold-400/30 transition-all"></div>
             </div>
             <div>
-              <span className="font-bold text-2xl text-white font-playfair">OFM Media</span>
+              <span className="font-bold text-2xl text-white font-playfair">Nigeria Football Hub</span>
               <div className="text-xs text-gold-400 font-medium">PREMIUM</div>
             </div>
           </Link>
